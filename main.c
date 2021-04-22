@@ -71,11 +71,14 @@ int main(void)
     motors_init();
 
     //displacement init
-    displacement_start();
+    //displacement_start();
 
     //send_tab is used to save the state of the buffer to send (double buffering)
     //to avoid modifications of the buffer while sending it
     static float send_tab[FFT_SIZE];
+
+    mic_start(&Calcul_angle);
+
 /*
 	#ifdef SEND_FROM_MIC
 		//starts the microphones processing thread.

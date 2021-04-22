@@ -27,7 +27,7 @@ int intensity = 100;
 
 
 // ********** thread function *********
-static THD_WORKING_AREA(waDisplacement, 256);
+/*static THD_WORKING_AREA(waDisplacement, 256);
 static THD_FUNCTION(Displacement, arg) {
 
     chRegSetThreadName(__FUNCTION__);
@@ -52,18 +52,19 @@ static THD_FUNCTION(Displacement, arg) {
     chThdSleepUntilWindowed(time, time + MS2ST(200));
 
 }
+*/
 
 // ********** public function *********
-void displacement_start(void)
+/*void displacement_start(void)
 {
-	chThdCreateStatic(waDisplacement, sizeof(waDisplacement, NORMALPRIO, Displacement, NULL);
+	chThdCreateStatic(waDisplacement, sizeof(waDisplacement), NORMALPRIO, Displacement, NULL);
 
 	//while waiting the functions get, we put:  (delete later)
 	    phase = 180;
 	    intensity = 100;
 }
 
-
+*/
 
 // ********** intern function **********
 void displacement_rotation (int angle_value){
@@ -85,7 +86,7 @@ void displacement_rotation (int angle_value){
 	}
 	else if ((angle_abs_value <= ANGLE_MIN) && (rotation_state == ON))
 	{
-		rotation_movement(OFF);
+		rotation_movement(OFF, OFF);
 
 		rotation_state = OFF;
 		translation_state = ON;
@@ -103,7 +104,7 @@ void displacement_translation (int intensity_value)
 	}
 	else if ((intensity_value >= INTENSITY_LIM) && translation_state)
 	{
-		translation_movement(OFF); // normalement pas besoins de plus d arguments à verifier experimentalement
+		translation_movement(OFF); // normalement pas besoins de plus d arguments ï¿½ verifier experimentalement
 		translation_state = OFF;
 	}
 	else return;
