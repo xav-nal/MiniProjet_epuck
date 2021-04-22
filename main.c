@@ -70,6 +70,9 @@ int main(void)
     //inits the motors
     motors_init();
 
+    //displacement init
+    displacement_start();
+
     //send_tab is used to save the state of the buffer to send (double buffering)
     //to avoid modifications of the buffer while sending it
     static float send_tab[FFT_SIZE];
@@ -109,16 +112,7 @@ int main(void)
 
 			}
 	#endif  /* SEND_FROM_MIC */
-   while(1){
-	   displacement_rotation (angle_rotation);
 
-	   if(angle_rotation > 0)
-	   {
-		   angle_rotation --;
-	   }
-
-       chThdSleep(100);
-    }
 }
 
 #define STACK_CHK_GUARD 0xe2dee396
