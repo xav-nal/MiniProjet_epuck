@@ -11,19 +11,39 @@
 #include <main.h>
 #include<displacement.h>
 #include <motors.h>
+#include <proximity.h>
+
 
 #define ANGLE_MIN           5 //degree
 #define INTENSITY_LIM     200 //UNITY ?
+#define TRESHOLD_SENSOR     5 //---- a definir experimentalement? ----
 #define ON				    1
 #define OFF				    0
 #define RIGHT				2
 #define LEFT				3
 
+enum { 	NORMAL_MODE, OBSTACLE_MODE};
+
+int mode = NORMAL_MODE;
+
 int rotation_state = OFF;
 int translation_state = OFF;
+bool obstacle_detected = FAUX;
 
 int phase = 0;
 int intensity = 100;
+
+unsigned int proximity_sensor[8];
+unsigned int obtacle[8];
+int obstacle_rotation[8] = {-73,-45, 0, 0, 0, 0, 45, 73};
+int obstacle_translation[8] = {OFF, OFF, ON, OFF, OFF, ON, OFF, OFF};
+
+void obstacle_detection (void);
+void normal_displacement(void);
+void displacement_rotation (int angle_value);
+void displacement_translation (int intensity);
+void rotation_movement(bool state,int direction);
+void translation_movement(bool state);
 
 
 // ********** thread function *********
@@ -37,16 +57,24 @@ static THD_FUNCTION(Displacement, arg) {
 
     time = chVTGetSystemTime();
 
-    //get_phase();
-    //get_intensity
+    obstacle_detection();
+    switch (mode)
+    {
+    case 2:
+      normal_displacement();
+      break;
 
+    case 6:
+      obstacle_displacement();
+      break;
 
-    displacement_rotation (phase);
-    displacement_translation (intensity);
+    default:
+      //mettre un chprintf?
+      break;
+    }
 
-    //while waiting the functions get, we put:  (delete later)
-    phase--;
-    intensity += 25;
+    if(obstacle_detected) obstacle_detected = OFF;
+
 
     //wake up in 200ms
     chThdSleepUntilWindowed(time, time + MS2ST(200));
@@ -57,8 +85,9 @@ static THD_FUNCTION(Displacement, arg) {
 void displacement_start(void)
 {
 	chThdCreateStatic(waDisplacement, sizeof(waDisplacement, NORMALPRIO, Displacement, NULL);
+	proximity_start();
 
-	//while waiting the functions get, we put:  (delete later)
+	//---- while waiting the functions get, we put:  (delete later) ----
 	    phase = 180;
 	    intensity = 100;
 }
@@ -66,6 +95,79 @@ void displacement_start(void)
 
 
 // ********** intern function **********
+void obstacle_displacement(void)
+{
+	int obstacle_num = 0;
+
+	//find the nearest obstacle
+	for(i = 0; i < 8; i++)
+	{
+		if((obstacle[i] == VRAI) && (proximity_sensor[i] > proximity_sensor[obstacle_num]))
+		{
+			obstacle_num = i;
+		}
+	}
+
+	//doing the displacement corresponds to the obstacle
+
+	//rotation
+	displacement_rotation(obstacle_rotation[obstacle_num]);
+
+	//translation
+	//displacement_translation()
+
+
+}
+
+void obstacle_detection (void)
+{
+
+
+	for(i = 0; i < 8; i++)
+	{
+		proximity_sensor[i] = get_prox(i);
+
+		if(proximity_sensor[i] < TRESHOLD_SENSOR)
+		{
+			obstacle[i] = VRAI;
+
+			if(obstacle_rotation[i] != 	ZERO) obstacle_detected = VRAI;
+		}
+		else
+			obstacle[i] = FAUX;
+	}
+
+	for(i = 0; i < 8 ; i++)
+	{
+		if(obstacle[i] == VRAI)
+		{
+			set_led(LED7, ON);
+		}
+	}
+
+
+	if(obstacle_detected)
+	{
+		mode = OBSTACLE_MODE;
+	}
+	else mode = NORMAL_MODE;
+
+}
+
+void normal_displacement(void)
+{
+	//get_phase();
+	//get_intensity
+
+
+	displacement_rotation (phase);
+	displacement_translation (intensity);
+
+	//---- while waiting the functions get, we put:  (delete later) ----
+	phase--;
+	intensity += 25;
+}
+
 void displacement_rotation (int angle_value){
 
 	int angle_abs_value = abs(angle_value);
@@ -96,18 +198,21 @@ void displacement_rotation (int angle_value){
 
 void displacement_translation (int intensity_value)
 {
+	if(intensity != FAUX)
+	{
+		if((intensity_value < INTENSITY_LIM ) && translation_state)
+		{
+			translation_movement(ON);
+		}
+		else if ((intensity_value >= INTENSITY_LIM) && translation_state)
+		{
+			translation_movement(OFF); // normalement pas besoins de plus d arguments à verifier experimentalement
+			translation_state = OFF;
+		}
+		else return;
 
-	if((intensity_value < INTENSITY_LIM ) && translation_state)
-	{
-		translation_movement(ON);
-	}
-	else if ((intensity_value >= INTENSITY_LIM) && translation_state)
-	{
-		translation_movement(OFF); // normalement pas besoins de plus d arguments à verifier experimentalement
-		translation_state = OFF;
 	}
 	else return;
-
 }
 
 void rotation_movement(bool state,int direction)

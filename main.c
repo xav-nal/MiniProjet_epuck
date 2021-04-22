@@ -24,6 +24,10 @@
 //uncomment to use double buffering to send the FFT to the computer
 #define DOUBLE_BUFFERING
 
+#define VRAI 1
+#define FAUX 0
+#define ZERO 0
+
 int angle_rotation = 180;
 
 static void serial_start(void)
