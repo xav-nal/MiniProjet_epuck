@@ -11,16 +11,23 @@
 #include <main.h>
 #include<displacement.h>
 #include <motors.h>
-#include <proximity.h>
+#include <sensors/proximity.h>
+#include <leds.h>
+#include<msgbus/messagebus.h>
 
 
 #define ANGLE_MIN           5 //degree
-#define INTENSITY_LIM     200 //UNITY ?
+#define DISTANCE_LIM        3 //cm
 #define TRESHOLD_SENSOR     5 //---- a definir experimentalement? ----
 #define ON				    1
 #define OFF				    0
 #define RIGHT				2
 #define LEFT				3
+
+
+messagebus_t bus;
+MUTEX_DECL(bus_lock);
+CONDVAR_DECL(bus_condvar);
 
 enum { 	NORMAL_MODE, OBSTACLE_MODE};
 
@@ -28,20 +35,23 @@ int mode = NORMAL_MODE;
 
 int rotation_state = OFF;
 int translation_state = OFF;
-bool obstacle_detected = FAUX;
+bool obstacle_detected = false;
 
-int phase = 0;
-int intensity = 100;
+int angle = 0;
+int distance = 100;
 
 unsigned int proximity_sensor[8];
-unsigned int obtacle[8];
+unsigned int obstacle[8];
 int obstacle_rotation[8] = {-73,-45, 0, 0, 0, 0, 45, 73};
 int obstacle_translation[8] = {OFF, OFF, ON, OFF, OFF, ON, OFF, OFF};
 
+int old_obstacle = false;
+
 void obstacle_detection (void);
+void obstacle_displacement(void);
 void normal_displacement(void);
 void displacement_rotation (int angle_value);
-void displacement_translation (int intensity);
+void displacement_translation (int distance);
 void rotation_movement(bool state,int direction);
 void translation_movement(bool state);
 
@@ -60,11 +70,11 @@ static THD_FUNCTION(Displacement, arg) {
     obstacle_detection();
     switch (mode)
     {
-    case 2:
+    case NORMAL_MODE:
       normal_displacement();
       break;
 
-    case 6:
+    case OBSTACLE_MODE:
       obstacle_displacement();
       break;
 
@@ -84,12 +94,14 @@ static THD_FUNCTION(Displacement, arg) {
 // ********** public function *********
 void displacement_start(void)
 {
-	chThdCreateStatic(waDisplacement, sizeof(waDisplacement, NORMALPRIO, Displacement, NULL);
+	chThdCreateStatic(waDisplacement, sizeof(waDisplacement), NORMALPRIO, Displacement, NULL);
+	messagebus_init(&bus, &bus_lock, &bus_condvar);
 	proximity_start();
 
+
 	//---- while waiting the functions get, we put:  (delete later) ----
-	    phase = 180;
-	    intensity = 100;
+	    angle = 180;
+	    distance = 100;
 }
 
 
@@ -100,9 +112,9 @@ void obstacle_displacement(void)
 	int obstacle_num = 0;
 
 	//find the nearest obstacle
-	for(i = 0; i < 8; i++)
+	for(int i = 0; i < 8; i++)
 	{
-		if((obstacle[i] == VRAI) && (proximity_sensor[i] > proximity_sensor[obstacle_num]))
+		if((obstacle[i] == true) && (proximity_sensor[i] > proximity_sensor[obstacle_num]))
 		{
 			obstacle_num = i;
 		}
@@ -111,7 +123,8 @@ void obstacle_displacement(void)
 	//doing the displacement corresponds to the obstacle
 
 	//rotation
-	displacement_rotation(obstacle_rotation[obstacle_num]);
+	angle = obstacle_rotation[obstacle_num];
+	displacement_rotation(angle);
 
 	//translation
 	//displacement_translation()
@@ -123,23 +136,23 @@ void obstacle_detection (void)
 {
 
 
-	for(i = 0; i < 8; i++)
+	for(int i = 0; i < 8; i++)
 	{
 		proximity_sensor[i] = get_prox(i);
 
 		if(proximity_sensor[i] < TRESHOLD_SENSOR)
 		{
-			obstacle[i] = VRAI;
+			obstacle[i] = true;
 
-			if(obstacle_rotation[i] != 	ZERO) obstacle_detected = VRAI;
+			if(obstacle_rotation[i] != 	false) obstacle_detected = true;
 		}
 		else
-			obstacle[i] = FAUX;
+			obstacle[i] = false;
 	}
 
-	for(i = 0; i < 8 ; i++)
+	for(int i = 0; i < 8 ; i++)
 	{
-		if(obstacle[i] == VRAI)
+		if(obstacle[i] == true)
 		{
 			set_led(LED7, ON);
 		}
@@ -160,12 +173,12 @@ void normal_displacement(void)
 	//get_intensity
 
 
-	displacement_rotation (phase);
-	displacement_translation (intensity);
+	displacement_rotation (angle);
+	displacement_translation (distance);
 
 	//---- while waiting the functions get, we put:  (delete later) ----
-	phase--;
-	intensity += 25;
+	angle--;
+	distance -= 5;
 }
 
 void displacement_rotation (int angle_value){
@@ -187,7 +200,7 @@ void displacement_rotation (int angle_value){
 	}
 	else if ((angle_abs_value <= ANGLE_MIN) && (rotation_state == ON))
 	{
-		rotation_movement(OFF);
+		rotation_movement(OFF,OFF);
 
 		rotation_state = OFF;
 		translation_state = ON;
@@ -196,15 +209,15 @@ void displacement_rotation (int angle_value){
 
 }
 
-void displacement_translation (int intensity_value)
+void displacement_translation (int distance_value)
 {
-	if(intensity != FAUX)
+	if(distance_value != false)
 	{
-		if((intensity_value < INTENSITY_LIM ) && translation_state)
+		if((distance_value < DISTANCE_LIM ) && translation_state)
 		{
 			translation_movement(ON);
 		}
-		else if ((intensity_value >= INTENSITY_LIM) && translation_state)
+		else if ((distance_value >= DISTANCE_LIM) && translation_state)
 		{
 			translation_movement(OFF); // normalement pas besoins de plus d arguments à verifier experimentalement
 			translation_state = OFF;
