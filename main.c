@@ -75,9 +75,12 @@ int main(void)
 
     //send_tab is used to save the state of the buffer to send (double buffering)
     //to avoid modifications of the buffer while sending it
-    static float send_tab[FFT_SIZE];
+    //static float send_tab[FFT_SIZE];
 
-    mic_start(&Calcul_angle);
+
+    //mic_start(&Calcul_angle);
+
+
 
 /*
 	#ifdef SEND_FROM_MIC
