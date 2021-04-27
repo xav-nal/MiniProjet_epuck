@@ -17,10 +17,11 @@ typedef enum {
 	BACK_OUTPUT
 } BUFFER_NAME_t;
 
+
+
+void Audio_start(void);
 void Calcul_angle(int16_t *data, uint16_t num_samples);
-
-double get_angle(void);
-
+float get_angle(void);
 uint16_t sound_remote_new(float* data);
 
 

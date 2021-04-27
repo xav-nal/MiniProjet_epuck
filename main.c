@@ -72,6 +72,9 @@ int main(void)
     //inits the motors
     motors_init();
 
+    //initialisation audio
+    Audio_start();
+
     //displacement init
 
 

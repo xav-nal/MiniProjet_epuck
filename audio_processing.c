@@ -51,6 +51,33 @@ static float angle_diff_old = 0;
 
 
 
+// ********** thread function *********
+/*static THD_WORKING_AREA(waAudio, 256);
+static THD_FUNCTION(Audio, arg) {
+
+    chRegSetThreadName(__FUNCTION__);
+    (void)arg;
+
+    systime_t time;
+
+    time = chVTGetSystemTime();
+
+    //wake up in 200ms
+    chThdSleepUntilWindowed(time, time + MS2ST(200));
+
+}*/
+
+// ********** public function *********
+void Audio_start(void)
+{
+	 mic_start(&Calcul_angle);
+
+}
+
+
+
+// ********** intern function **********
+
 void wait_send_to_computer(void){
 	chBSemWait(&sendToComputer_sem);
 }
@@ -180,39 +207,25 @@ void Calcul_angle(int16_t *data, uint16_t num_samples){
 	        float im_R = micRight_cmplx_input[2*highest_pic_R+1];
 	        float re_R = micRight_cmplx_input[2*highest_pic_R];
 
-			chprintf((BaseSequentialStream *) &SDU1, " im_R =    %f   ",micRight_cmplx_input[2*highest_pic_R+1]);
-			chprintf((BaseSequentialStream *) &SDU1, " re_R =    %f   ",micRight_cmplx_input[2*highest_pic_R]);
+			//chprintf((BaseSequentialStream *) &SDU1, " im_R =    %f   ",micRight_cmplx_input[2*highest_pic_R+1]);
+			//chprintf((BaseSequentialStream *) &SDU1, " re_R =    %f   ",micRight_cmplx_input[2*highest_pic_R]);
 
 			angle_R = atan2(im_R, re_R);
-			chprintf((BaseSequentialStream *) &SDU1, " angle_R =    %f rad  ",angle_R);
+			//chprintf((BaseSequentialStream *) &SDU1, " angle_R =    %f rad  ",angle_R);
 
 			angle_L = atan2l(micLeft_cmplx_input[2*highest_pic_L+1], micLeft_cmplx_input[2*highest_pic_L]);
-			//chprintf((BaseSequentialStream *) &SDU1, " angle_L =    %d rad  ",angle_L);
+			//chprintf((BaseSequentialStream *) &SDU1, " angle_L =    %f rad  ",angle_L);
 
 			angle_diff= angle_L - angle_R;
-			//chprintf((BaseSequentialStream *) &SDU1, " angle =    %d rad  ",angle_diff);
+			chprintf((BaseSequentialStream *) &SDU1, " angle =    %f rad  ",angle_diff);
 
 
 					}
 
 				}
 
-
-
-
-
-
-double get_angle(void){
+float get_angle(void){
 	return angle_diff;
 }
 
 
-
-
-/*Filtre passe-bas permettant d'éliminer les hautes fréquences
-			 *
-			 * Comme on a la relation : fréquence = position * 15,625
-			 * On élimine toutes la valeurs dans le tableau dont l'index de position est supérieur
-			 * à FREQ_COUPURE
-			 *
-			*/

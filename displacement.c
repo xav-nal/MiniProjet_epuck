@@ -7,6 +7,7 @@
 #include "hal.h"
 #include <usbcfg.h>
 #include <chprintf.h>
+#include <audio_processing.h>
 
 #include <main.h>
 #include<displacement.h>
@@ -87,7 +88,7 @@ static THD_FUNCTION(Displacement, arg) {
 
 
     //wake up in 200ms
-    chThdSleepUntilWindowed(time, time + MS2ST(200));
+    chThdSleepUntilWindowed(time, time + MS2ST(20));
 
 }
 
@@ -185,6 +186,7 @@ void displacement_rotation (int angle_value){
 
 	if(angle_abs_value > ANGLE_MIN)
 	{
+		chprintf((BaseSequentialStream *) &SDU1, " bonjour");
 		if(angle_value > 0)
 		{
 			rotation_movement(ON,RIGHT);
@@ -217,7 +219,7 @@ void displacement_translation (int distance_value)
 		}
 		else if ((distance_value >= DISTANCE_LIM) && translation_state)
 		{
-			translation_movement(OFF); // normalement pas besoins de plus d arguments à verifier experimentalement
+			translation_movement(OFF); // normalement pas besoins de plus d arguments Ã  verifier experimentalement
 			translation_state = OFF;
 		}
 		else return;
