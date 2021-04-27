@@ -73,7 +73,6 @@ int main(void)
     motors_init();
 
     //displacement init
-    displacement_start();
 
 
 }

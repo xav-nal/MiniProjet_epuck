@@ -10,6 +10,7 @@
 #include <communications.h>
 #include <fft.h>
 #include <arm_math.h>
+#include <math.h>
 
 //semaphore
 static BSEMAPHORE_DECL(sendToComputer_sem, TRUE);
@@ -105,6 +106,8 @@ uint16_t sound_remote_new(float* data){
 	}
 
 	return max_norm_index;
+
+
 }
 
 
@@ -168,20 +171,26 @@ void Calcul_angle(int16_t *data, uint16_t num_samples){
 			nb_samples = 0;
 			mustSend++;
 
-			uint16_t highest_pic_R = sound_remote_new(micRight_output);
-			uint16_t highest_pic_L = sound_remote_new(micLeft_output);
+			int16_t highest_pic_R = sound_remote_new(micRight_output);
+			int16_t highest_pic_L = sound_remote_new(micLeft_output);
 
 			//prendre float et non double parce que l'epuck convertit systématiquement les double en float de toute façon
-			//arctan2f pour qu'on ait l'artangente d'un float en signé
+			//arctan2f pour qu'on ait l'arc tangente d'un float en signé
 
-			angle_R = atan2f(micRight_cmplx_input[2*highest_pic_R+1], micRight_cmplx_input[2*highest_pic_R]);
-			chprintf((BaseSequentialStream *) &SDU1, " angle_R =    %d rad  ",angle_R);
+	        float im_R = micRight_cmplx_input[2*highest_pic_R+1];
+	        float re_R = micRight_cmplx_input[2*highest_pic_R];
 
-			angle_L = atan2f(micLeft_cmplx_input[2*highest_pic_L+1], micLeft_cmplx_input[2*highest_pic_L]);
-			chprintf((BaseSequentialStream *) &SDU1, " angle_L =    %d rad  ",angle_L);
+			chprintf((BaseSequentialStream *) &SDU1, " im_R =    %f   ",micRight_cmplx_input[2*highest_pic_R+1]);
+			chprintf((BaseSequentialStream *) &SDU1, " re_R =    %f   ",micRight_cmplx_input[2*highest_pic_R]);
+
+			angle_R = atan2(im_R, re_R);
+			chprintf((BaseSequentialStream *) &SDU1, " angle_R =    %f rad  ",angle_R);
+
+			angle_L = atan2l(micLeft_cmplx_input[2*highest_pic_L+1], micLeft_cmplx_input[2*highest_pic_L]);
+			//chprintf((BaseSequentialStream *) &SDU1, " angle_L =    %d rad  ",angle_L);
 
 			angle_diff= angle_L - angle_R;
-			chprintf((BaseSequentialStream *) &SDU1, " angle =    %d rad  ",angle_diff);
+			//chprintf((BaseSequentialStream *) &SDU1, " angle =    %d rad  ",angle_diff);
 
 
 					}
