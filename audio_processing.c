@@ -11,106 +11,36 @@
 #include <fft.h>
 #include <arm_math.h>
 #include <math.h>
+#include<displacement.h>
 
-//semaphore
-static BSEMAPHORE_DECL(sendToComputer_sem, TRUE);
+
 
 //2 times FFT_SIZE because these arrays contain complex numbers (real + imaginary)
 static float micLeft_cmplx_input[2 * FFT_SIZE];
 static float micRight_cmplx_input[2 * FFT_SIZE];
-static float micFront_cmplx_input[2 * FFT_SIZE];
-static float micBack_cmplx_input[2 * FFT_SIZE];
+
+
 //Arrays containing the computed magnitude of the complex numbers
 static float micLeft_output[FFT_SIZE];
 static float micRight_output[FFT_SIZE];
-static float micFront_output[FFT_SIZE];
-static float micBack_output[FFT_SIZE];
+
 
 #define MIN_VALUE_THRESHOLD	10000 
+#define WRONG_FREQ             -1
 
 #define MIN_FREQ		18	//we don't analyze before this index to not use resources for nothing
-//#define FREQ_FORWARD	16	//250Hz
-//#define FREQ_LEFT		19	//296Hz
-//#define FREQ_RIGHT		23	//359HZ
-//#define FREQ_BACKWARD	26	//406Hz
-//#define MAX_FREQ		30	//we don't analyze after this index to not use resources for nothing
-#define FREQ_COUPURE   24 //375Hz
+#define FREQ_RESEARCH 	24 //370HZ
+#define MAX_FREQ		30	//we don't analyze after this index to not use resources for nothing
 
-/*#define FREQ_FORWARD_L		(FREQ_FORWARD-1)
-#define FREQ_FORWARD_H		(FREQ_FORWARD+1)
-#define FREQ_LEFT_L			(FREQ_LEFT-1)
-#define FREQ_LEFT_H			(FREQ_LEFT+1)
-#define FREQ_RIGHT_L		(FREQ_RIGHT-1)
-#define FREQ_RIGHT_H		(FREQ_RIGHT+1)
-#define FREQ_BACKWARD_L		(FREQ_BACKWARD-1)
-#define FREQ_BACKWARD_H		(FREQ_BACKWARD+1)
-*/
+#define FREQ_RESEARCH_L  (FREQ_RESEARCH-1)
+#define FREQ_RESEARCH_G	 (FREQ_RESEARCH+1)
+
+
+void calcul_angle(float im_r, float re_r, float im_l, float re_l);
+int16_t sound_remote(float* data);
 
 static float angle_diff = 0;
-static float angle_diff_old = 0;
 
-
-
-// ********** thread function *********
-/*static THD_WORKING_AREA(waAudio, 256);
-static THD_FUNCTION(Audio, arg) {
-
-    chRegSetThreadName(__FUNCTION__);
-    (void)arg;
-
-    systime_t time;
-
-    time = chVTGetSystemTime();
-
-    //wake up in 200ms
-    chThdSleepUntilWindowed(time, time + MS2ST(200));
-
-}*/
-
-// ********** public function *********
-void Audio_start(void)
-{
-	 mic_start(&Calcul_angle);
-
-}
-
-
-
-// ********** intern function **********
-
-void wait_send_to_computer(void){
-	chBSemWait(&sendToComputer_sem);
-}
-
-float* get_audio_buffer_ptr(BUFFER_NAME_t name){
-	if(name == LEFT_CMPLX_INPUT){
-		return micLeft_cmplx_input;
-	}
-	else if (name == RIGHT_CMPLX_INPUT){
-		return micRight_cmplx_input;
-	}
-	else if (name == FRONT_CMPLX_INPUT){
-		return micFront_cmplx_input;
-	}
-	else if (name == BACK_CMPLX_INPUT){
-		return micBack_cmplx_input;
-	}
-	else if (name == LEFT_OUTPUT){
-		return micLeft_output;
-	}
-	else if (name == RIGHT_OUTPUT){
-		return micRight_output;
-	}
-	else if (name == FRONT_OUTPUT){
-		return micFront_output;
-	}
-	else if (name == BACK_OUTPUT){
-		return micBack_output;
-	}
-	else{
-		return NULL;
-	}
-}
 
 
 /*
@@ -120,53 +50,68 @@ float* get_audio_buffer_ptr(BUFFER_NAME_t name){
  *
  */
 
-uint16_t sound_remote_new(float* data){
+int16_t sound_remote(float* data){
 	float max_norm = MIN_VALUE_THRESHOLD;
 	int16_t max_norm_index = -1;
 
 	//search for the highest peak
-	for(uint16_t i = MIN_FREQ ; i <= FREQ_COUPURE ; i++){
+	for(uint16_t i = MIN_FREQ ; i <= MAX_FREQ ; i++){
 		if(data[i] > max_norm){
 			max_norm = data[i];
 			max_norm_index = i;
 		}
 	}
+	//chprintf((BaseSequentialStream *) &SDU1, " maxnorme =    %d   ",max_norm_index);
 
-	return max_norm_index;
+	if((max_norm_index >= FREQ_RESEARCH_L) && (max_norm_index <= FREQ_RESEARCH_G) )
+	{
+		return max_norm_index;
+	}else
+		return WRONG_FREQ;
 
 
 }
 
 
+void processAudio(int16_t *data, uint16_t num_samples){
 
-void Calcul_angle(int16_t *data, uint16_t num_samples){
 
-	static uint16_t nb_samples = 0;
-	static uint8_t mustSend = 0;
-	angle_diff_old = angle_diff;
-	float angle_R = 0;
-	float angle_L =0;
+
+	/*
+		*
+		*	We get 160 samples per mic every 10ms
+		*	So we fill the samples buffers to reach
+		*	1024 samples, then we compute the FFTs.
+		*
+		*/
+
+		static uint16_t nb_samples = 0;
 
 		//loop to fill the buffers
-		for(uint16_t i = 0 ; i < num_samples ; i+=4){
+		for(uint16_t i = 0 ; i < num_samples ; i+=4)
+		{
 			//construct an array of complex numbers. Put 0 to the imaginary part
 			micRight_cmplx_input[nb_samples] = (float)data[i + MIC_RIGHT];
 			micLeft_cmplx_input[nb_samples] = (float)data[i + MIC_LEFT];
+
 
 			nb_samples++;
 
 			micRight_cmplx_input[nb_samples] = 0;
 			micLeft_cmplx_input[nb_samples] = 0;
 
+
 			nb_samples++;
 
 			//stop when buffer is full
-			if(nb_samples >= (2 * FFT_SIZE)){
+			if(nb_samples >= (2 * FFT_SIZE))
+			{
 				break;
 			}
 		}
 
-		if(nb_samples >= (2 * FFT_SIZE)){
+		if(nb_samples >= (2 * FFT_SIZE))
+		{
 			/*	FFT proccessing
 			*
 			*	This FFT function stores the results in the input buffer given.
@@ -175,6 +120,7 @@ void Calcul_angle(int16_t *data, uint16_t num_samples){
 
 			doFFT_optimized(FFT_SIZE, micRight_cmplx_input);
 			doFFT_optimized(FFT_SIZE, micLeft_cmplx_input);
+
 
 			/*	Magnitude processing
 			*
@@ -186,46 +132,49 @@ void Calcul_angle(int16_t *data, uint16_t num_samples){
 			arm_cmplx_mag_f32(micRight_cmplx_input, micRight_output, FFT_SIZE);
 			arm_cmplx_mag_f32(micLeft_cmplx_input, micLeft_output, FFT_SIZE);
 
-
-
-			//sends only one FFT result over 10 for 1 mic to not flood the computer
-			//sends to UART3
-			if(mustSend > 8){
-				//signals to send the result to the computer
-				chBSemSignal(&sendToComputer_sem);
-				mustSend = 0;
-			}
 			nb_samples = 0;
-			mustSend++;
-
-			int16_t highest_pic_R = sound_remote_new(micRight_output);
-			int16_t highest_pic_L = sound_remote_new(micLeft_output);
-
-			//prendre float et non double parce que l'epuck convertit systématiquement les double en float de toute façon
-			//arctan2f pour qu'on ait l'arc tangente d'un float en signé
-
-	        float im_R = micRight_cmplx_input[2*highest_pic_R+1];
-	        float re_R = micRight_cmplx_input[2*highest_pic_R];
-
-			//chprintf((BaseSequentialStream *) &SDU1, " im_R =    %f   ",micRight_cmplx_input[2*highest_pic_R+1]);
-			//chprintf((BaseSequentialStream *) &SDU1, " re_R =    %f   ",micRight_cmplx_input[2*highest_pic_R]);
-
-			angle_R = atan2(im_R, re_R);
-			//chprintf((BaseSequentialStream *) &SDU1, " angle_R =    %f rad  ",angle_R);
-
-			angle_L = atan2l(micLeft_cmplx_input[2*highest_pic_L+1], micLeft_cmplx_input[2*highest_pic_L]);
-			//chprintf((BaseSequentialStream *) &SDU1, " angle_L =    %f rad  ",angle_L);
-
-			angle_diff= angle_L - angle_R;
-			chprintf((BaseSequentialStream *) &SDU1, " angle =    %f rad  ",angle_diff);
 
 
-					}
+			int16_t highest_pic_R = sound_remote(micRight_output);
+			int16_t highest_pic_L = sound_remote(micLeft_output);
 
+
+
+
+			if((highest_pic_R != WRONG_FREQ) && (highest_pic_L != WRONG_FREQ))
+			{
+				//chprintf((BaseSequentialStream *) &SDU1, " highest =    %d   ",highest_pic_L);
+				calcul_angle(micRight_cmplx_input[2*highest_pic_R+1], micRight_cmplx_input[2*highest_pic_R],
+						micLeft_cmplx_input[2*highest_pic_L+1], micLeft_cmplx_input[2*highest_pic_L]);
+
+				displacement_rotation (angle_diff);
+				if( abs(angle_diff) < 0.3)
+				{
+					displacement_translation (100);
 				}
+				else
+					displacement_translation (1);
 
-float get_angle(void){
-	return angle_diff;
+			}else
+				return;
+
+		}
+
+
+}
+
+void calcul_angle(float im_r, float re_r, float im_l, float re_l)
+{
+	float angle_R = 0;
+	float angle_L = 0;
+
+	angle_R = atan2f(im_r, re_r);
+	//chprintf((BaseSequentialStream *) &SDU1, " angle r =    %f rad  ",angle_R);
+
+	angle_L = atan2f(im_l, re_l);
+
+	angle_diff= angle_R - angle_L;
+	//chprintf((BaseSequentialStream *) &SDU1, " angle =    %f rad  ",angle_diff);
 }
 
 

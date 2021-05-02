@@ -17,7 +17,7 @@
 #include<msgbus/messagebus.h>
 
 
-#define ANGLE_MIN           5 //degree
+#define ANGLE_MIN           0.5 //radian
 #define DISTANCE_LIM        3 //cm
 #define TRESHOLD_SENSOR     5 //---- a definir experimentalement? ----
 #define ON				    1
@@ -93,6 +93,7 @@ static THD_FUNCTION(Displacement, arg) {
 }
 
 // ********** public function *********
+void displacement_start(void)
 {
 	chThdCreateStatic(waDisplacement, sizeof(waDisplacement), NORMALPRIO, Displacement, NULL);
 	messagebus_init(&bus, &bus_lock, &bus_condvar);
@@ -186,7 +187,6 @@ void displacement_rotation (int angle_value){
 
 	if(angle_abs_value > ANGLE_MIN)
 	{
-		chprintf((BaseSequentialStream *) &SDU1, " bonjour");
 		if(angle_value > 0)
 		{
 			rotation_movement(ON,RIGHT);
@@ -213,12 +213,13 @@ void displacement_translation (int distance_value)
 {
 	if(distance_value != false)
 	{
-		if((distance_value < DISTANCE_LIM ) && translation_state)
+		if(distance_value > DISTANCE_LIM )
 		{
 			translation_movement(ON);
 		}
-		else if ((distance_value >= DISTANCE_LIM) && translation_state)
+		else if (distance_value <= DISTANCE_LIM)
 		{
+			chprintf((BaseSequentialStream *) &SDU1, " distance =    %d   ",distance);
 			translation_movement(OFF); // normalement pas besoins de plus d arguments à verifier experimentalement
 			translation_state = OFF;
 		}
