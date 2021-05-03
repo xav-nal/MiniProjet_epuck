@@ -8,7 +8,7 @@
 
 
 void displacement_start(void);
-void displacement_rotation (int angle_value);
+void displacement_rotation (float angle_value);
 void displacement_translation (int distance_value);
 
 

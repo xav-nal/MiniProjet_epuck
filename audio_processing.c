@@ -35,11 +35,14 @@ static float micRight_output[FFT_SIZE];
 #define FREQ_RESEARCH_L  (FREQ_RESEARCH-1)
 #define FREQ_RESEARCH_G	 (FREQ_RESEARCH+1)
 
+#define ANGLE_ADJUST  -3.98  // (pi/2)/(accumulate phase)
+
 
 void calcul_angle(float im_r, float re_r, float im_l, float re_l);
 int16_t sound_remote(float* data);
 
 static float angle_diff = 0;
+static float angle_diff_old = 0;
 
 
 
@@ -84,6 +87,7 @@ void processAudio(int16_t *data, uint16_t num_samples){
 		*	1024 samples, then we compute the FFTs.
 		*
 		*/
+
 
 		static uint16_t nb_samples = 0;
 
@@ -147,16 +151,24 @@ void processAudio(int16_t *data, uint16_t num_samples){
 				calcul_angle(micRight_cmplx_input[2*highest_pic_R+1], micRight_cmplx_input[2*highest_pic_R],
 						micLeft_cmplx_input[2*highest_pic_L+1], micLeft_cmplx_input[2*highest_pic_L]);
 
-				displacement_rotation (angle_diff);
-				if( abs(angle_diff) < 0.3)
-				{
-					displacement_translation (100);
-				}
-				else
-					displacement_translation (1);
+				angle_diff = angle_diff*ANGLE_ADJUST;
 
-			}else
-				return;
+				//regulateur();
+
+
+				if( abs(angle_diff) < 0.1)
+				{
+					displacement_translation(100);
+				}
+				else {
+					displacement_translation(0);
+				    displacement_rotation(angle_diff);
+				}
+			}
+			else {
+				displacement_rotation(false);
+				displacement_translation(false);
+			}
 
 		}
 
@@ -175,6 +187,15 @@ void calcul_angle(float im_r, float re_r, float im_l, float re_l)
 
 	angle_diff= angle_R - angle_L;
 	//chprintf((BaseSequentialStream *) &SDU1, " angle =    %f rad  ",angle_diff);
+}
+
+
+void regulateur(void) {
+
+	angle_diff = 0.9*angle_diff + 0.1*angle_diff_old;
+
+	angle_diff_old = angle_diff;
+
 }
 
 

@@ -17,7 +17,7 @@
 #include<msgbus/messagebus.h>
 
 
-#define ANGLE_MIN           0.5 //radian
+#define ANGLE_MIN           0.1 //radian
 #define DISTANCE_LIM        3 //cm
 #define TRESHOLD_SENSOR     5 //---- a definir experimentalement? ----
 #define ON				    1
@@ -51,7 +51,7 @@ int old_obstacle = false;
 void obstacle_detection (void);
 void obstacle_displacement(void);
 void normal_displacement(void);
-void displacement_rotation (int angle_value);
+//void displacement_rotation (int angle_value);
 void displacement_translation (int distance);
 void rotation_movement(bool state,int direction);
 void translation_movement(bool state);
@@ -181,9 +181,9 @@ void normal_displacement(void)
 	distance -= 5;
 }
 
-void displacement_rotation (int angle_value){
+void displacement_rotation (float angle_value){
 
-	int angle_abs_value = abs(angle_value);
+	float angle_abs_value = abs(angle_value);
 
 	if(angle_abs_value > ANGLE_MIN)
 	{
@@ -213,20 +213,12 @@ void displacement_translation (int distance_value)
 {
 	if(distance_value != false)
 	{
-		if(distance_value > DISTANCE_LIM )
-		{
-			translation_movement(ON);
-		}
-		else if (distance_value <= DISTANCE_LIM)
-		{
-			chprintf((BaseSequentialStream *) &SDU1, " distance =    %d   ",distance);
-			translation_movement(OFF); // normalement pas besoins de plus d arguments à verifier experimentalement
-			translation_state = OFF;
-		}
-		else return;
+		translation_movement(ON);
+	}
+	else{
+		translation_movement(OFF);
 
 	}
-	else return;
 }
 
 void rotation_movement(bool state,int direction)
@@ -265,3 +257,6 @@ void translation_movement(bool state)
 		right_motor_set_speed(OFF);
 	}
 }
+
+
+

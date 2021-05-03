@@ -7,6 +7,8 @@
 
 
 void processAudio(int16_t *data, uint16_t num_samples);
+void regulateur(void);
+
 
 
 #endif /* AUDIO_PROCESSING_H */
