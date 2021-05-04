@@ -1,4 +1,8 @@
 build
+.cproject
+.project
+.dep
+.launch
 
 .DS_store
 
