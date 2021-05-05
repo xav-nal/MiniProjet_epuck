@@ -24,6 +24,8 @@
 #define OFF				    0
 #define RIGHT				2
 #define LEFT				    3
+#define KP                   150
+#define KI                   3.5
 
 messagebus_t bus;
 MUTEX_DECL(bus_lock);
@@ -55,6 +57,7 @@ void normal_displacement(void);
 void displacement_translation (int distance);
 void rotation_movement(bool state,int direction);
 void translation_movement(bool state);
+int16_t pid_regulator(float error);
 
 
 
@@ -262,13 +265,17 @@ void rotation_movement(bool state,int direction)
 	{
 		if(direction == RIGHT)
 		{
-			left_motor_set_speed(-ROTATION_SPEED);
-			right_motor_set_speed(ROTATION_SPEED);
+			//left_motor_set_speed(-ROTATION_SPEED);
+			//right_motor_set_speed(ROTATION_SPEED);
+			left_motor_set_speed(-pid_regulator(angle));
+			right_motor_set_speed(pid_regulator(angle));
 		}
 		else
 		{
-			left_motor_set_speed(ROTATION_SPEED);
-			right_motor_set_speed(-ROTATION_SPEED);
+			//left_motor_set_speed(ROTATION_SPEED);
+			//right_motor_set_speed(-ROTATION_SPEED);
+			left_motor_set_speed(pid_regulator(angle));
+			right_motor_set_speed(-pid_regulator(angle));
 		}
 
 	}else
@@ -294,4 +301,19 @@ void translation_movement(bool state)
 }
 
 
+int16_t pid_regulator(float error){
+
+	error = abs(error);
+
+	float speed_correction = 0;
+
+	static float sum_error = 0;
+
+	sum_error += error;
+
+	speed_correction = KP*error + KI*sum_error;
+
+	return speed_correction;
+
+}
 
