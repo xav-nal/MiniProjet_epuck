@@ -39,7 +39,7 @@ int main(void)
     mic_start(&processAudio);
 
     //displacement init
-    //displacement_start();
+    displacement_start();
 
     /*
     while(1)

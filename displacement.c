@@ -79,10 +79,11 @@ static THD_FUNCTION(Displacement, arg) {
 
 
 		angle = get_angle();
-		displacement_rotation (angle);
 		//chprintf((BaseSequentialStream *) &SDU1, " ANGLE %f ", angle);
 
-		if(abs(angle) > ANGLE_MIN)
+	if(angle != 0){
+
+		if(abs(angle) < ANGLE_MIN)
 		{
 
 			displacement_translation(10);
@@ -90,11 +91,20 @@ static THD_FUNCTION(Displacement, arg) {
 		else
 		{
 			displacement_translation(0);
+			displacement_rotation (angle);
 		}
 
+	}
+	else {
+		displacement_rotation(0);
+		displacement_translation(0);
+	}
+
 		//wake up in 50ms
-		chThdSleepUntilWindowed(time, time + MS2ST(200));
-    }
+		//chThdSleepUntilWindowed(time, time + MS2ST(200));
+	    chThdSleepMilliseconds(200);
+
+   }
 
 }
 

@@ -68,7 +68,7 @@ int16_t sound_remote(float* data){
 			max_norm_index = i;
 		}
 	}
-	chprintf((BaseSequentialStream *) &SDU1, " maxnorme =    %d   ",max_norm_index);
+	//chprintf((BaseSequentialStream *) &SDU1, " maxnorme =    %d   ",max_norm_index);
 
 	if((max_norm_index >= FREQ_RESEARCH_L) && (max_norm_index <= FREQ_RESEARCH_G) )
 	{
@@ -161,7 +161,7 @@ void processAudio(int16_t *data, uint16_t num_samples){
 		}
 
 
-		chThdSleepMilliseconds(10);
+		//chThdSleepMilliseconds(10);
 
 }
 
