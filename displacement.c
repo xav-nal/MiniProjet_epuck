@@ -19,14 +19,16 @@
 
 #define ANGLE_MIN           0.1 //radian
 #define DISTANCE_LIM        3 //cm
-#define TRESHOLD_SENSOR     5 //---- a definir experimentalement? ----
+#define TRESHOLD_SENSOR     100 //---- a definir experimentalement? ----
 #define ON				    1
 #define OFF				    0
 #define RIGHT				2
-#define LEFT				3
+#define LEFT				    3
 
+messagebus_t bus;
+MUTEX_DECL(bus_lock);
+CONDVAR_DECL(bus_condvar);
 
-//MUTEX_DECL(serialMtx);
 
 enum { 	NORMAL_MODE, OBSTACLE_MODE};
 
@@ -54,7 +56,7 @@ void displacement_translation (int distance);
 void rotation_movement(bool state,int direction);
 void translation_movement(bool state);
 
-//MUTEX_DECL(serialMtx);
+
 
 // ********** thread function *********
 static THD_WORKING_AREA(waDisplacement, 256);
@@ -63,42 +65,45 @@ static THD_FUNCTION(Displacement, arg) {
     chRegSetThreadName(__FUNCTION__);
     (void)arg;
 
-    //chMtxLock(&serialMtx);
     systime_t time;
 
     time = chVTGetSystemTime();
-
-
-
-    //chMtxUnlock(&serialMtx);
-    //chBSemSignal(&audio_ready_sem);
 
     while(1)
     {
     	time = chVTGetSystemTime();
 
+    	obstacle_detection();
 
-		angle = get_angle();
-		//chprintf((BaseSequentialStream *) &SDU1, " ANGLE %f ", angle);
+    	if(obstacle_detected == false){
+    	 	//chprintf((BaseSequentialStream *) &SDU1, " rentre ");
+    		angle = get_angle();
+    		//chprintf((BaseSequentialStream *) &SDU1, " ANGLE %f ", angle);
 
-	if(angle != 0){
+    			if(angle != 0){
 
-		if(abs(angle) < ANGLE_MIN)
-		{
+    				if(abs(angle) < ANGLE_MIN)
+    				{
+    					//chprintf((BaseSequentialStream *) &SDU1, " rentré = ");
+    					displacement_translation(10);
+    				}
+    				else
+    				{
+    					displacement_translation(0);
+    					displacement_rotation (angle);
+    				}
 
-			displacement_translation(10);
-		}
-		else
-		{
-			displacement_translation(0);
-			displacement_rotation (angle);
-		}
+    			}
+    			else {
+    				displacement_rotation(0);
+    				displacement_translation(0);
+    			}
 
-	}
-	else {
-		displacement_rotation(0);
-		displacement_translation(0);
-	}
+
+    	}else{
+    		displacement_translation(0);
+    		displacement_rotation(0);
+    	}
 
 		//wake up in 50ms
 		//chThdSleepUntilWindowed(time, time + MS2ST(200));
@@ -113,8 +118,8 @@ void displacement_start(void)
 {
 
 	chThdCreateStatic(waDisplacement, sizeof(waDisplacement), NORMALPRIO, Displacement, NULL);
-	//messagebus_init(&bus, &bus_lock, &bus_condvar);
-	//proximity_start();
+	messagebus_init(&bus, &bus_lock, &bus_condvar);
+	proximity_start();
 
 
 }
@@ -154,22 +159,32 @@ void obstacle_displacement(void)
 void obstacle_detection (void)
 {
 
+	int obs = 0;
 
 	for(int i = 0; i < 8; i++)
 	{
 		proximity_sensor[i] = get_prox(i);
+        //if((i == 0)) {
+		    //chprintf((BaseSequentialStream *) &SDU1, " sensor %d valeur %d ", i ,proximity_sensor[i]);
+      //}
 
-		if(proximity_sensor[i] < TRESHOLD_SENSOR)
+		if(proximity_sensor[i] > TRESHOLD_SENSOR)
 		{
-			obstacle[i] = true;
+			obs = 1;
+			//obstacle[i] = true;
+			obstacle_detected = true;
 
-			if(obstacle_rotation[i] != 	false) obstacle_detected = true;
+			//if(obstacle_rotation[i] != 	false) obstacle_detected = true;
 		}
-		else
-			obstacle[i] = false;
+		//else
+			//obstacle[i] = false;
 	}
 
-	for(int i = 0; i < 8 ; i++)
+	if(obs == 0) {
+		obstacle_detected = false;
+	}
+
+	/*for(int i = 0; i < 8 ; i++)
 	{
 		if(obstacle[i] == true)
 		{
@@ -182,7 +197,7 @@ void obstacle_detection (void)
 	{
 		mode = OBSTACLE_MODE;
 	}
-	else mode = NORMAL_MODE;
+	else mode = NORMAL_MODE;*/
 
 }
 
