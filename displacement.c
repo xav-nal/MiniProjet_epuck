@@ -26,19 +26,17 @@
 #define LEFT				3
 
 
-messagebus_t bus;
-MUTEX_DECL(bus_lock);
-CONDVAR_DECL(bus_condvar);
+//MUTEX_DECL(serialMtx);
 
 enum { 	NORMAL_MODE, OBSTACLE_MODE};
 
 int mode = NORMAL_MODE;
 
-int rotation_state = OFF;
-int translation_state = OFF;
-bool obstacle_detected = false;
+static int rotation_state = OFF;
 
-int angle = 0;
+static bool obstacle_detected = false;
+
+float angle = 0;
 int distance = 100;
 
 unsigned int proximity_sensor[8];
@@ -56,6 +54,7 @@ void displacement_translation (int distance);
 void rotation_movement(bool state,int direction);
 void translation_movement(bool state);
 
+//MUTEX_DECL(serialMtx);
 
 // ********** thread function *********
 static THD_WORKING_AREA(waDisplacement, 256);
@@ -64,47 +63,57 @@ static THD_FUNCTION(Displacement, arg) {
     chRegSetThreadName(__FUNCTION__);
     (void)arg;
 
+    //chMtxLock(&serialMtx);
     systime_t time;
 
     time = chVTGetSystemTime();
 
-    obstacle_detection();
-    switch (mode)
+
+
+    //chMtxUnlock(&serialMtx);
+    //chBSemSignal(&audio_ready_sem);
+
+    while(1)
     {
-    case NORMAL_MODE:
-      normal_displacement();
-      break;
+    	time = chVTGetSystemTime();
 
-    case OBSTACLE_MODE:
-      obstacle_displacement();
-      break;
 
-    default:
-      //mettre un chprintf?
-      break;
+		angle = get_angle();
+		displacement_rotation (angle);
+		//chprintf((BaseSequentialStream *) &SDU1, " ANGLE %f ", angle);
+
+		if(abs(angle) > ANGLE_MIN)
+		{
+
+			displacement_translation(10);
+		}
+		else
+		{
+			displacement_translation(0);
+		}
+
+		//wake up in 50ms
+		chThdSleepUntilWindowed(time, time + MS2ST(200));
     }
-
-    if(obstacle_detected) obstacle_detected = OFF;
-
-
-    //wake up in 200ms
-    chThdSleepUntilWindowed(time, time + MS2ST(20));
 
 }
 
 // ********** public function *********
 void displacement_start(void)
 {
+
 	chThdCreateStatic(waDisplacement, sizeof(waDisplacement), NORMALPRIO, Displacement, NULL);
-	messagebus_init(&bus, &bus_lock, &bus_condvar);
-	proximity_start();
+	//messagebus_init(&bus, &bus_lock, &bus_condvar);
+	//proximity_start();
 
 
-	//---- while waiting the functions get, we put:  (delete later) ----
-	    angle = 180;
-	    distance = 100;
 }
+void displacement_test(void)
+{
+	chprintf((BaseSequentialStream *) &SDU1, " test deplacement");
+	return;
 
+}
 
 // ********** intern function **********
 void obstacle_displacement(void)
@@ -190,20 +199,19 @@ void displacement_rotation (float angle_value){
 		if(angle_value > 0)
 		{
 			rotation_movement(ON,RIGHT);
+			//chprintf((BaseSequentialStream *) &SDU1, " Rotation ");
 		}
 		else
 		{
 			rotation_movement(ON,LEFT);
+			//chprintf((BaseSequentialStream *) &SDU1, " Rotation ");
 		}
-		rotation_state = ON;
-		translation_state = OFF;
+
 	}
 	else if ((angle_abs_value <= ANGLE_MIN) && (rotation_state == ON))
 	{
 		rotation_movement(OFF,OFF);
-
-		rotation_state = OFF;
-		translation_state = ON;
+		//chprintf((BaseSequentialStream *) &SDU1, " Rotation OFF ");
 	}
 	else return;
 
@@ -213,10 +221,12 @@ void displacement_translation (int distance_value)
 {
 	if(distance_value != false)
 	{
+		//chprintf((BaseSequentialStream *) &SDU1, " Translation ");
 		translation_movement(ON);
 	}
 	else{
 		translation_movement(OFF);
+		//chprintf((BaseSequentialStream *) &SDU1, " Translation OFF ");
 
 	}
 }

@@ -1,10 +1,9 @@
 #include "ch.h"
 #include "hal.h"
-#include <main.h>
 #include <usbcfg.h>
 #include <chprintf.h>
 
-#include <motors.h>
+#include <main.h>
 #include <audio/microphone.h>
 #include <audio_processing.h>
 #include <communications.h>
@@ -28,7 +27,7 @@ static float micRight_output[FFT_SIZE];
 #define MIN_VALUE_THRESHOLD	10000 
 #define WRONG_FREQ             -1
 
-#define MIN_FREQ		18	//we don't analyze before this index to not use resources for nothing
+#define MIN_FREQ		10	//we don't analyze before this index to not use resources for nothing
 #define FREQ_RESEARCH 	24 //370HZ
 #define MAX_FREQ		30	//we don't analyze after this index to not use resources for nothing
 
@@ -40,9 +39,14 @@ static float micRight_output[FFT_SIZE];
 
 void calcul_angle(float im_r, float re_r, float im_l, float re_l);
 int16_t sound_remote(float* data);
+void regulateur(void);
+
+
 
 static float angle_diff = 0;
 static float angle_diff_old = 0;
+
+float count_audio = 0;
 
 
 
@@ -64,7 +68,7 @@ int16_t sound_remote(float* data){
 			max_norm_index = i;
 		}
 	}
-	//chprintf((BaseSequentialStream *) &SDU1, " maxnorme =    %d   ",max_norm_index);
+	chprintf((BaseSequentialStream *) &SDU1, " maxnorme =    %d   ",max_norm_index);
 
 	if((max_norm_index >= FREQ_RESEARCH_L) && (max_norm_index <= FREQ_RESEARCH_G) )
 	{
@@ -78,8 +82,6 @@ int16_t sound_remote(float* data){
 
 void processAudio(int16_t *data, uint16_t num_samples){
 
-
-
 	/*
 		*
 		*	We get 160 samples per mic every 10ms
@@ -87,7 +89,6 @@ void processAudio(int16_t *data, uint16_t num_samples){
 		*	1024 samples, then we compute the FFTs.
 		*
 		*/
-
 
 		static uint16_t nb_samples = 0;
 
@@ -153,26 +154,20 @@ void processAudio(int16_t *data, uint16_t num_samples){
 
 				angle_diff = angle_diff*ANGLE_ADJUST;
 
-				//regulateur();
-
-
-				if( abs(angle_diff) < 0.1)
-				{
-					displacement_translation(100);
-				}
-				else {
-					displacement_translation(0);
-				    displacement_rotation(angle_diff);
-				}
 			}
-			else {
-				displacement_rotation(false);
-				displacement_translation(false);
-			}
+			else
+				angle_diff = false;
 
 		}
 
 
+		chThdSleepMilliseconds(10);
+
+}
+
+void audio_test(void)
+{
+	chprintf((BaseSequentialStream *) &SDU1, " audio test ");
 }
 
 void calcul_angle(float im_r, float re_r, float im_l, float re_l)
@@ -196,6 +191,11 @@ void regulateur(void) {
 
 	angle_diff_old = angle_diff;
 
+}
+
+float get_angle(void)
+{
+	return angle_diff;
 }
 
 

@@ -11,12 +11,15 @@
 #include <motors.h>
 #include <audio/microphone.h>
 
+#include <displacement.h>
 #include <audio_processing.h>
 #include <fft.h>
 #include <communications.h>
 #include <arm_math.h>
 
-#include <displacement.h>
+
+
+
 
 int main(void)
 {
@@ -32,18 +35,31 @@ int main(void)
     //inits the motors
     motors_init();
 
-    //initialisation audio
+    //inits audio
     mic_start(&processAudio);
 
     //displacement init
+    //displacement_start();
 
+    /*
+    while(1)
+    {
+    	audio_test();
+    	displacement_test();
+    	displacement_start();
+    	chThdSleepMilliseconds(200);
+    }*/
 
 }
+
 
 #define STACK_CHK_GUARD 0xe2dee396
 uintptr_t __stack_chk_guard = STACK_CHK_GUARD;
 
 void __stack_chk_fail(void)
 {
+	while(1)
+	{
     chSysHalt("Stack smashing detected");
+	}
 }

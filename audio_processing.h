@@ -5,9 +5,10 @@
 #define FFT_SIZE 	1024
 
 
+void audio_test(void);
 
 void processAudio(int16_t *data, uint16_t num_samples);
-void regulateur(void);
+float get_angle(void);
 
 
 
