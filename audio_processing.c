@@ -46,6 +46,8 @@ void regulateur(void);
 static float angle_diff = 0;
 static float angle_diff_old = 0;
 
+static bool sound_detected = 0;
+
 float count_audio = 0;
 
 
@@ -148,6 +150,7 @@ void processAudio(int16_t *data, uint16_t num_samples){
 
 			if((highest_pic_R != WRONG_FREQ) && (highest_pic_L != WRONG_FREQ))
 			{
+				sound_detected = true;
 				//chprintf((BaseSequentialStream *) &SDU1, " highest =    %d   ",highest_pic_L);
 				calcul_angle(micRight_cmplx_input[2*highest_pic_R+1], micRight_cmplx_input[2*highest_pic_R],
 						micLeft_cmplx_input[2*highest_pic_L+1], micLeft_cmplx_input[2*highest_pic_L]);
@@ -156,7 +159,10 @@ void processAudio(int16_t *data, uint16_t num_samples){
 
 			}
 			else
+			{
+				sound_detected = false;
 				angle_diff = false;
+			}
 
 		}
 
@@ -165,10 +171,6 @@ void processAudio(int16_t *data, uint16_t num_samples){
 
 }
 
-void audio_test(void)
-{
-	chprintf((BaseSequentialStream *) &SDU1, " audio test ");
-}
 
 void calcul_angle(float im_r, float re_r, float im_l, float re_l)
 {
@@ -196,6 +198,11 @@ void regulateur(void) {
 float get_angle(void)
 {
 	return angle_diff;
+}
+
+bool get_sound(void)
+{
+	return sound_detected;
 }
 
 
