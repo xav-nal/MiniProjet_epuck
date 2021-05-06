@@ -23,7 +23,7 @@
 #define ON				    1
 #define OFF				    0
 #define RIGHT				2
-#define LEFT				    3
+#define LEFT				3
 
 messagebus_t bus;
 MUTEX_DECL(bus_lock);
@@ -50,7 +50,7 @@ int old_obstacle = false;
 
 void obstacle_detection (void);
 void obstacle_displacement(void);
-void normal_displacement(void);
+void normal_displacement(float angle);
 //void displacement_rotation (int angle_value);
 void displacement_translation (int distance);
 void rotation_movement(bool state,int direction);
@@ -76,33 +76,16 @@ static THD_FUNCTION(Displacement, arg) {
     	obstacle_detection();
 
     	if(obstacle_detected == false){
-    	 	//chprintf((BaseSequentialStream *) &SDU1, " rentre ");
+
     		angle = get_angle();
     		//chprintf((BaseSequentialStream *) &SDU1, " ANGLE %f ", angle);
 
-    			if(angle != 0){
-
-    				if(abs(angle) < ANGLE_MIN)
-    				{
-    					//chprintf((BaseSequentialStream *) &SDU1, " rentré = ");
-    					displacement_translation(10);
-    				}
-    				else
-    				{
-    					displacement_translation(0);
-    					displacement_rotation (angle);
-    				}
-
-    			}
-    			else {
-    				displacement_rotation(0);
-    				displacement_translation(0);
-    			}
-
+    		normal_displacement(angle);
 
     	}else{
-    		displacement_translation(0);
-    		displacement_rotation(0);
+
+    		normal_displacement(OFF);
+
     	}
 
 		//wake up in 50ms
@@ -110,7 +93,6 @@ static THD_FUNCTION(Displacement, arg) {
 	    chThdSleepMilliseconds(200);
 
    }
-
 }
 
 // ********** public function *********
@@ -159,18 +141,15 @@ void obstacle_displacement(void)
 void obstacle_detection (void)
 {
 
-	int obs = 0;
+	int obst_det = 0;
 
 	for(int i = 0; i < 8; i++)
 	{
 		proximity_sensor[i] = get_prox(i);
-        //if((i == 0)) {
-		    //chprintf((BaseSequentialStream *) &SDU1, " sensor %d valeur %d ", i ,proximity_sensor[i]);
-      //}
 
 		if(proximity_sensor[i] > TRESHOLD_SENSOR)
 		{
-			obs = 1;
+			obst_det = 1;
 			//obstacle[i] = true;
 			obstacle_detected = true;
 
@@ -180,7 +159,7 @@ void obstacle_detection (void)
 			//obstacle[i] = false;
 	}
 
-	if(obs == 0) {
+	if(obst_det == 0) {
 		obstacle_detected = false;
 	}
 
@@ -201,18 +180,26 @@ void obstacle_detection (void)
 
 }
 
-void normal_displacement(void)
+void normal_displacement(float angle_value)
 {
-	//get_phase();
-	//get_intensity
+	if(angle_value != 0){
 
+		if(abs(angle_value) < ANGLE_MIN)
+		{
+			//chprintf((BaseSequentialStream *) &SDU1, " rentré = ");
+			displacement_translation(ON);
+		}
+		else
+		{
+			displacement_translation(OFF);
+			displacement_rotation (angle_value);
+		}
 
-	displacement_rotation (angle);
-	displacement_translation (distance);
-
-	//---- while waiting the functions get, we put:  (delete later) ----
-	angle--;
-	distance -= 5;
+	}
+	else {
+		displacement_rotation(OFF);
+		displacement_translation(OFF);
+	}
 }
 
 void displacement_rotation (float angle_value){
@@ -231,7 +218,6 @@ void displacement_rotation (float angle_value){
 			rotation_movement(ON,LEFT);
 			//chprintf((BaseSequentialStream *) &SDU1, " Rotation ");
 		}
-
 	}
 	else if ((angle_abs_value <= ANGLE_MIN) && (rotation_state == ON))
 	{
@@ -244,7 +230,7 @@ void displacement_rotation (float angle_value){
 
 void displacement_translation (int distance_value)
 {
-	if(distance_value != false)
+	if(distance_value != OFF)
 	{
 		//chprintf((BaseSequentialStream *) &SDU1, " Translation ");
 		translation_movement(ON);
