@@ -19,13 +19,15 @@
 
 #define ANGLE_MIN           0.1 //radian
 #define DISTANCE_LIM        3 //cm
-#define TRESHOLD_SENSOR     100 //---- a definir experimentalement? ----
+#define TRESHOLD_SENSOR     100 //---- a definir experimentalement? ---- // plus on se rapproche plus la valeur du sensor augmente
 #define ON				    1
 #define OFF				    0
 #define RIGHT				2
 #define LEFT				    3
-#define KP                   150
-#define KI                   3.5
+#define KP                  180.0f
+#define KI                  1.8f
+#define MAX_SUM_ERROR 	   (MOTOR_SPEED_LIMIT/10*KI)
+#define ANGLE_MIN_PID       0.5
 
 messagebus_t bus;
 MUTEX_DECL(bus_lock);
@@ -93,7 +95,7 @@ static THD_FUNCTION(Displacement, arg) {
 
 		//wake up in 50ms
 		//chThdSleepUntilWindowed(time, time + MS2ST(200));
-	    chThdSleepMilliseconds(200);
+	    chThdSleepMilliseconds(50);
 
    }
 }
@@ -289,17 +291,27 @@ void translation_movement(bool state)
 
 int16_t pid_regulator(float error){
 
-	error = abs(error);
+	error = fabs(error);
 
-	float speed_correction = 0;
+	float speed = 0;
 
 	static float sum_error = 0;
 
+	if(fabs(error) < ANGLE_MIN_PID){
+		return 0;
+	}
+
 	sum_error += error;
 
-	speed_correction = KP*error + KI*sum_error;
+	if(sum_error > MAX_SUM_ERROR){
+		sum_error = MAX_SUM_ERROR;
+	}else if(sum_error < -MAX_SUM_ERROR){
+		sum_error = -MAX_SUM_ERROR;
+	}
 
-	return speed_correction;
+	speed = KP*error + KI*sum_error;
+
+	return speed;
 
 }
 
