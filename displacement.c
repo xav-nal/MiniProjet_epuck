@@ -10,16 +10,18 @@
 #include <audio_processing.h>
 
 #include <main.h>
-#include<displacement.h>
+#include <displacement.h>
 #include <motors.h>
 #include <sensors/proximity.h>
 #include <leds.h>
-#include<msgbus/messagebus.h>
+#include <msgbus/messagebus.h>
 
 
 #define ANGLE_MIN           0.1 //radian
-#define DISTANCE_LIM        3 //cm
-#define TRESHOLD_SENSOR     100 //---- a definir experimentalement? ----
+#define DISTANCE_LIM        3   //cm
+#define TRESHOLD_SENSOR     100 //defini experimentalement
+#define TIME_LIM			5   //seconde
+#define IDLE_ANGLE          2
 #define ON				    1
 #define OFF				    0
 #define RIGHT				2
@@ -30,16 +32,17 @@ MUTEX_DECL(bus_lock);
 CONDVAR_DECL(bus_condvar);
 
 
-enum { 	NORMAL_MODE, OBSTACLE_MODE};
+enum { 	NORMAL_MODE, OBSTACLE_MODE, IDLE_MODE};
 
 int mode = NORMAL_MODE;
 
 static int rotation_state = OFF;
+static float angle = 0;
 
 static bool obstacle_detected = false;
+uint32_t last_sound_detected = 0 ;
 
-float angle = 0;
-int distance = 100;
+
 
 unsigned int proximity_sensor[8];
 unsigned int obstacle[8];
@@ -55,6 +58,7 @@ void normal_displacement(float angle);
 void displacement_translation (int distance);
 void rotation_movement(bool state,int direction);
 void translation_movement(bool state);
+int idle_displacement(int led1);
 
 
 
@@ -65,30 +69,71 @@ static THD_FUNCTION(Displacement, arg) {
     chRegSetThreadName(__FUNCTION__);
     (void)arg;
 
+    int led1 = false;
     systime_t time;
 
     time = chVTGetSystemTime();
+
+    bool sound_detected = false;
 
     while(1)
     {
     	time = chVTGetSystemTime();
 
+    	sound_detected = get_sound();
+
+
+    	if(sound_detected == true)
+		{
+			last_sound_detected = time;
+			mode = NORMAL_MODE;
+		}
+
+    	int time_nosound = time - last_sound_detected ;
+
     	obstacle_detection();
 
     	if(obstacle_detected == false){
 
-    		angle = get_angle();
-    		//chprintf((BaseSequentialStream *) &SDU1, " ANGLE %f ", angle);
+    		if(time_nosound >= 6000)
+			{
+				mode = IDLE_MODE;
+			}
 
-    		normal_displacement(angle);
+		}else{
 
-    	}else{
+			mode = OBSTACLE_MODE;
 
-    		normal_displacement(OFF);
+		}
+
+
+
+    	switch(mode)
+    	{
+    					case NORMAL_MODE:
+							angle = get_angle();
+							//chprintf((BaseSequentialStream *) &SDU1, " ANGLE %f ", angle);
+							normal_displacement(angle);
+							break;
+
+    					case OBSTACLE_MODE:
+    						normal_displacement(OFF);
+    						break;
+
+
+    					case IDLE_MODE:
+							led1 = idle_displacement(led1);
+							break;
+
+    					default:
+						normal_displacement(OFF);
+						break;
 
     	}
 
-		//wake up in 50ms
+
+
+		//wake up in 200ms
 		//chThdSleepUntilWindowed(time, time + MS2ST(200));
 	    chThdSleepMilliseconds(200);
 
@@ -105,14 +150,29 @@ void displacement_start(void)
 
 
 }
-void displacement_test(void)
-{
-	chprintf((BaseSequentialStream *) &SDU1, " test deplacement");
-	return;
 
-}
 
 // ********** intern function **********
+int idle_displacement(int led1)
+{
+	displacement_rotation (IDLE_ANGLE);
+
+	if(led1 == false) set_led(LED1,ON);
+	else
+	{
+		led1 = true;
+		set_led(LED1,OFF);
+	}
+
+	set_rgb_led(LED2, 0, 1, 0);
+	set_rgb_led(LED4, 0, 0, 1);
+
+
+	toggle_rgb_led(LED6, BLUE_LED, 0.5);
+	toggle_rgb_led(LED8, GREEN_LED, 0.5);
+
+	return led1;
+}
 void obstacle_displacement(void)
 {
 	int obstacle_num = 0;
@@ -277,6 +337,11 @@ void translation_movement(bool state)
 		left_motor_set_speed(OFF);
 		right_motor_set_speed(OFF);
 	}
+}
+
+void initialisation_leds(void)
+{
+	clear_leds();
 }
 
 
