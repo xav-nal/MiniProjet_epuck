@@ -30,27 +30,32 @@
 #define KI                  1.8f
 #define MAX_SUM_ERROR 	   (MOTOR_SPEED_LIMIT/10*KI)
 #define ANGLE_MIN_PID       0.5
+#define INTENSITY_LIM		10000
 
 messagebus_t bus;
 MUTEX_DECL(bus_lock);
 CONDVAR_DECL(bus_condvar);
 
 
-enum { 	NORMAL_MODE, OBSTACLE_MODE, IDLE_MODE};
+enum { 	NORMAL_MODE, OBSTACLE_MODE, IDLE_MODE, SUCCESS_MODE};
 
-int mode = NORMAL_MODE;
+static  int mode = NORMAL_MODE;
 
 static int rotation_state = OFF;
 static float angle = 0;
 
 static bool obstacle_detected = false;
-uint32_t last_sound_detected = 0 ;
+static bool obst_lock = false;
+static int obstacle_detected_time = 0;
+
+
+static uint32_t last_sound_detected = 0 ;
 
 
 
 unsigned int proximity_sensor[8];
 unsigned int obstacle[8];
-int obstacle_rotation[8] = {-73,-45, 0, 0, 0, 0, 45, 73};
+float obstacle_rotation[8] = {-1.273,-0.785, 0, 0, 0, 0, 0.785, 1.273};
 int obstacle_translation[8] = {OFF, OFF, ON, OFF, OFF, ON, OFF, OFF};
 
 int old_obstacle = false;
@@ -58,12 +63,13 @@ int old_obstacle = false;
 void obstacle_detection (void);
 void obstacle_displacement(void);
 void normal_displacement(float angle);
-//void displacement_rotation (int angle_value);
+void displacement_rotation (float angle_value,int speed);
 void displacement_translation (int distance);
-void rotation_movement(bool state,int direction);
+void rotation_movement(bool state,int direction,int speed);
 void translation_movement(bool state);
 int16_t pid_regulator(float error);
 int idle_displacement(int led1);
+void success_displacement(void);
 
 
 
@@ -75,6 +81,7 @@ static THD_FUNCTION(Displacement, arg) {
     (void)arg;
 
     int led1 = false;
+
     systime_t time;
 
     time = chVTGetSystemTime();
@@ -84,51 +91,85 @@ static THD_FUNCTION(Displacement, arg) {
     while(1)
     {
     	time = chVTGetSystemTime();
+    	int intensity = 0;
 
-    	sound_detected = get_sound();
+    	//sound_detected = get_sound();
 
-
-    	if(sound_detected == true)
-		{
-			last_sound_detected = time;
-			mode = NORMAL_MODE;
-		}
 
     	int time_nosound = time - last_sound_detected ;
 
     	obstacle_detection();
 
-    	if(obstacle_detected == false){
+    	/*if(sound_detected == true)
+		{
+			last_sound_detected = time;
+			mode = NORMAL_MODE;
+		}*/
 
-    		if(time_nosound >= 6000)
+    	/*if(obstacle_detected == false){
+
+    		if(time_nosound >= 5000)
 			{
 				mode = IDLE_MODE;
+				//chprintf((BaseSequentialStream *) &SDU1, " no sound ");
 			}
 
 		}else{
+			intensity =  get_intensity();
 
-			mode = OBSTACLE_MODE;
+			if(intensity > INTENSITY_LIM)
+			{
+				mode = SUCCESS_MODE;
+			}
+			else
+				mode = OBSTACLE_MODE;
 
+		}*/
+    	if(obst_lock == true)
+		{
+			obstacle_displacement();
 		}
 
 
+    	if(obstacle_detected == true)
+    	{
+
+    		if(obst_lock == false)
+    		{
+    			mode = OBSTACLE_MODE;
+    			obst_lock = true;
+    			obstacle_detected_time = time;
+    			normal_displacement(OFF);
+
+    		}
+    	}
 
     	switch(mode)
     	{
     					case NORMAL_MODE:
-							angle = get_angle();
-							//chprintf((BaseSequentialStream *) &SDU1, " ANGLE %f ", angle);
-							normal_displacement(angle);
+							//angle = get_angle();
+							//chprintf((BaseSequentialStream *) &SDU1, " normale mode angle %f ", angle);
+							//normal_displacement(angle);
+    						displacement_translation(TRANSLATION_SPEED);
+    						//normal_displacement(OFF);
 							break;
 
     					case OBSTACLE_MODE:
-    						normal_displacement(OFF);
+    						//chprintf((BaseSequentialStream *) &SDU1, " obstacle mode ");
+    						//normal_displacement(OFF);
     						break;
 
 
+
     					case IDLE_MODE:
-							led1 = idle_displacement(led1);
+    						//chprintf((BaseSequentialStream *) &SDU1, " idle mode ");
+							//led1 = idle_displacement(led1);
 							break;
+
+    					case SUCCESS_MODE:
+    						//chprintf((BaseSequentialStream *) &SDU1, " SUCCES MODE ");
+    						success_displacement();
+    						break;
 
     					default:
 						normal_displacement(OFF);
@@ -158,14 +199,24 @@ void displacement_start(void)
 
 
 // ********** intern function **********
+void success_displacement(void)
+{
+	//chprintf((BaseSequentialStream *) &SDU1, " success displacement ");
+	//displacement_rotation (angle, ROTATION_SPEED);
+	return;
+}
 int idle_displacement(int led1)
 {
-	displacement_rotation (IDLE_ANGLE);
+	//chprintf((BaseSequentialStream *) &SDU1, " idle displacement ");
+	displacement_rotation (IDLE_ANGLE, ROTATION_SPEED);
 
-	if(led1 == false) set_led(LED1,ON);
-	else
+	if(led1 == false)
 	{
 		led1 = true;
+		set_led(LED1,ON);
+	}
+	else
+	{
 		set_led(LED1,OFF);
 	}
 
@@ -180,68 +231,83 @@ int idle_displacement(int led1)
 }
 void obstacle_displacement(void)
 {
-	int obstacle_num = 0;
+	systime_t time;
+	time = chVTGetSystemTime();
 
 	//find the nearest obstacle
-	for(int i = 0; i < 8; i++)
+
+	if((time - obstacle_detected_time) < 550)
 	{
-		if((obstacle[i] == true) && (proximity_sensor[i] > proximity_sensor[obstacle_num]))
-		{
-			obstacle_num = i;
-		}
+		displacement_rotation(100, ROTATION_SPEED);
+	}
+	else if(((time - obstacle_detected_time) < 800) && ((time - obstacle_detected_time) >= 800))
+	{
+		displacement_translation(100);
+	}
+	else
+	{
+		displacement_translation(OFF);
+		obst_lock = false;
+		mode = NORMAL_MODE;
 	}
 
-	//doing the displacement corresponds to the obstacle
 
-	//rotation
-	angle = obstacle_rotation[obstacle_num];
-	displacement_rotation(angle);
-
-	//translation
-	//displacement_translation()
 
 
 }
 
 void obstacle_detection (void)
 {
+	//chprintf((BaseSequentialStream *) &SDU1, " obstacle detection mode = %d ", mode);
 
 	int obst_det = 0;
+	int nearest_sensor = 0;
+	uint16_t nearest_sensor_index = 0;
 
-	for(int i = 0; i < 8; i++)
+	for(int i = 0; i < 2; i++)
 	{
 		proximity_sensor[i] = get_prox(i);
 
-		if(proximity_sensor[i] > TRESHOLD_SENSOR)
+		if(abs(proximity_sensor[i]) > TRESHOLD_SENSOR)
 		{
 			obst_det = 1;
-			//obstacle[i] = true;
 			obstacle_detected = true;
 
-			//if(obstacle_rotation[i] != 	false) obstacle_detected = true;
+			if(abs(proximity_sensor[i]) > nearest_sensor)
+			{
+				nearest_sensor = proximity_sensor[i];
+				nearest_sensor_index = i;
+			}
 		}
-		//else
-			//obstacle[i] = false;
 	}
 
-	if(obst_det == 0) {
+	for(int i = 6; i < 8; i++)
+	{
+		proximity_sensor[i] = get_prox(i);
+
+		if(abs(proximity_sensor[i]) > TRESHOLD_SENSOR)
+		{
+			obst_det = true;
+			obstacle_detected = true;
+
+			if(abs(proximity_sensor[i]) > nearest_sensor)
+			{
+				nearest_sensor = proximity_sensor[i];
+				nearest_sensor_index = i;
+			}
+		}
+	}
+
+	if(obst_det == false) {
 		obstacle_detected = false;
 	}
 
-	/*for(int i = 0; i < 8 ; i++)
+	if(mode == OBSTACLE_MODE)
 	{
-		if(obstacle[i] == true)
-		{
-			set_led(LED7, ON);
-		}
+		angle = obstacle_rotation[nearest_sensor_index];
+		//chprintf((BaseSequentialStream *) &SDU1, " capteur %d  ",nearest_sensor_index+1);
+		//chprintf((BaseSequentialStream *) &SDU1, " value %d  ",nearest_sensor);
 	}
-
-
-	if(obstacle_detected)
-	{
-		mode = OBSTACLE_MODE;
-	}
-	else mode = NORMAL_MODE;*/
 
 }
 
@@ -257,17 +323,17 @@ void normal_displacement(float angle_value)
 		else
 		{
 			displacement_translation(OFF);
-			displacement_rotation (angle_value);
+			displacement_rotation (angle_value,pid_regulator(angle));
 		}
 
 	}
 	else {
-		displacement_rotation(OFF);
+		displacement_rotation(OFF,OFF);
 		displacement_translation(OFF);
 	}
 }
 
-void displacement_rotation (float angle_value){
+void displacement_rotation (float angle_value,int speed){
 
 	float angle_abs_value = abs(angle_value);
 
@@ -275,18 +341,18 @@ void displacement_rotation (float angle_value){
 	{
 		if(angle_value > 0)
 		{
-			rotation_movement(ON,RIGHT);
+			rotation_movement(ON,RIGHT,speed);
 			//chprintf((BaseSequentialStream *) &SDU1, " Rotation ");
 		}
 		else
 		{
-			rotation_movement(ON,LEFT);
+			rotation_movement(ON,LEFT,speed);
 			//chprintf((BaseSequentialStream *) &SDU1, " Rotation ");
 		}
 	}
 	else if ((angle_abs_value <= ANGLE_MIN) && (rotation_state == ON))
 	{
-		rotation_movement(OFF,OFF);
+		rotation_movement(OFF,OFF, OFF);
 		//chprintf((BaseSequentialStream *) &SDU1, " Rotation OFF ");
 	}
 	else return;
@@ -307,7 +373,7 @@ void displacement_translation (int distance_value)
 	}
 }
 
-void rotation_movement(bool state,int direction)
+void rotation_movement(bool state,int direction,int speed)
 {
 	if(state == ON)
 	{
@@ -315,15 +381,15 @@ void rotation_movement(bool state,int direction)
 		{
 			//left_motor_set_speed(-ROTATION_SPEED);
 			//right_motor_set_speed(ROTATION_SPEED);
-			left_motor_set_speed(-pid_regulator(angle));
-			right_motor_set_speed(pid_regulator(angle));
+			left_motor_set_speed(-speed);
+			right_motor_set_speed(speed);
 		}
 		else
 		{
 			//left_motor_set_speed(ROTATION_SPEED);
 			//right_motor_set_speed(-ROTATION_SPEED);
-			left_motor_set_speed(pid_regulator(angle));
-			right_motor_set_speed(-pid_regulator(angle));
+			left_motor_set_speed(speed);
+			right_motor_set_speed(-speed);
 		}
 
 	}else
