@@ -36,7 +36,7 @@ int main(void)
     motors_init();
 
     //inits audio
-   // mic_start(&processAudio);
+    mic_start(&processAudio);
 
     //displacement init
     displacement_start();
