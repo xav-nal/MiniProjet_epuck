@@ -14,6 +14,8 @@
 #include <motors.h>
 #include <sensors/proximity.h>
 #include <leds.h>
+//#include <audio/play_melody.h>
+//#include <audio/play_melody.c>
 #include <msgbus/messagebus.h>
 
 
@@ -50,6 +52,7 @@ static int obstacle_detected_time = 0;
 
 
 static uint32_t last_sound_detected = 0 ;
+
 
 
 
@@ -105,6 +108,9 @@ static THD_FUNCTION(Displacement, arg) {
 			last_sound_detected = time;
 			mode = NORMAL_MODE;
 		}
+    	else {
+    		mode = IDLE_MODE;
+    	}
 
     	if(obstacle_detected == false){
 
@@ -148,12 +154,13 @@ static THD_FUNCTION(Displacement, arg) {
 
     					case OBSTACLE_MODE:
     						//chprintf((BaseSequentialStream *) &SDU1, " obstacle mode ");
+    						clear_leds();
     						obstacle_displacement();
     						break;
 
     					case IDLE_MODE:
     						//chprintf((BaseSequentialStream *) &SDU1, " idle mode ");
-							//led1 = idle_displacement(led1);
+						led1 = idle_displacement(led1);
 							break;
 
     					case SUCCESS_MODE:
@@ -181,6 +188,7 @@ void displacement_start(void)
 	chThdCreateStatic(waDisplacement, sizeof(waDisplacement), NORMALPRIO, Displacement, NULL);
 	messagebus_init(&bus, &bus_lock, &bus_condvar);
 	proximity_start();
+	//playMelodyStart();
 
 
 }
@@ -193,20 +201,32 @@ int idle_displacement(int led1)
 	//chprintf((BaseSequentialStream *) &SDU1, " idle displacement ");
 	displacement_rotation (IDLE_ANGLE, ROTATION_SPEED);
 
+
+	//playMelody(WE_ARE_THE_CHAMPIONS, ML_SIMPLE_PLAY, &melody[1]); don't understand error when I put this line
+
 	if(led1 == false)
 	{
 		led1 = true;
 		set_led(LED1,ON);
+		set_led(LED3,OFF);
+		set_led(LED5,ON);
+		set_led(LED7,OFF);
+		//toggle_rgb_led(LED2, BLUE_LED, 200);
+		//toggle_rgb_led(LED4, BLUE_LED, 255);
+
 	}
 	else
 	{
+		led1 = false;
 		set_led(LED1,OFF);
+		set_led(LED3,ON);
+		set_led(LED5,OFF);
+		set_led(LED7,ON);
 	}
-
-
 
 	return led1;
 }
+
 void obstacle_displacement(void)
 {
 	systime_t time;
@@ -246,6 +266,7 @@ void obstacle_detection (void)
 		{
 			obst_det = 1;
 			obstacle_detected = true;
+			set_front_led(ON);
 
 			if(abs(proximity_sensor[i]) > nearest_sensor)
 			{
@@ -263,6 +284,7 @@ void obstacle_detection (void)
 		{
 			obst_det = true;
 			obstacle_detected = true;
+			set_front_led(ON);
 
 			if(abs(proximity_sensor[i]) > nearest_sensor)
 			{
@@ -274,6 +296,7 @@ void obstacle_detection (void)
 
 	if(obst_det == false) {
 		obstacle_detected = false;
+		set_front_led(OFF);
 	}
 
 
