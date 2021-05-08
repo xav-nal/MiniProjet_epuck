@@ -162,10 +162,12 @@ int idle_displacement(int led1)
 {
 	displacement_rotation (IDLE_ANGLE);
 
-	if(led1 == false) set_led(LED1,ON);
+	if(led1 == false) {
+		set_led(LED1,ON);
+		led1 = true;
+	}
 	else
 	{
-		led1 = true;
 		set_led(LED1,OFF);
 	}
 
