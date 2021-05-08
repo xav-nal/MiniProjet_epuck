@@ -11,8 +11,8 @@
 void displacement_start(void);
 
 void displacement_test(void);
-void displacement_rotation (float angle_value);
-void displacement_translation (int distance_value);
+//void displacement_rotation (float angle_value);
+//void displacement_translation (int distance_value);
 
 
 #endif /* DIPLACEMENT_H */

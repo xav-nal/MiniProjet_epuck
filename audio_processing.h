@@ -10,6 +10,7 @@ void audio_test(void);
 void processAudio(int16_t *data, uint16_t num_samples);
 float get_angle(void);
 bool get_sound(void);
+int get_intensity(void);
 
 
 

@@ -45,6 +45,7 @@ void regulateur(void);
 
 static float angle_diff = 0;
 static float angle_diff_old = 0;
+static int intensity = 0;
 
 static bool sound_detected = 0;
 
@@ -157,6 +158,11 @@ void processAudio(int16_t *data, uint16_t num_samples){
 
 				angle_diff = angle_diff*ANGLE_ADJUST;
 
+				intensity = sqrt((micRight_cmplx_input[2*highest_pic_R+1])*(micRight_cmplx_input[2*highest_pic_R+1]) +
+						micRight_cmplx_input[2*highest_pic_R]*micRight_cmplx_input[2*highest_pic_R] );
+
+				//chprintf((BaseSequentialStream *) &SDU1, " intensity =    %d   ",intensity);
+
 			}
 			else
 			{
@@ -205,4 +211,8 @@ bool get_sound(void)
 	return sound_detected;
 }
 
+int get_intensity(void)
+{
+	return intensity;
+}
 
