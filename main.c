@@ -10,6 +10,8 @@
 #include <chprintf.h>
 #include <motors.h>
 #include <audio/microphone.h>
+#include <audio/audio_thread.h>
+#include <spi_comm.h>
 
 #include <displacement.h>
 #include <audio_processing.h>
@@ -28,9 +30,11 @@ int main(void)
     chSysInit();
     mpu_init();
 
+    //to use the music/sound from the robot
+    dac_start();
+
+    //start the spi communication to use RGB led
     spi_comm_start();
-
-
 
     //starts the USB communication
     usb_start();

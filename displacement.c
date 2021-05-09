@@ -210,7 +210,7 @@ int idle_displacement(int led1)
 	displacement_rotation (IDLE_ANGLE, ROTATION_SPEED);
 
 
-	//playMelody(WE_ARE_THE_CHAMPIONS, ML_SIMPLE_PLAY, NULL);
+	playMelody(WE_ARE_THE_CHAMPIONS, ML_SIMPLE_PLAY, NULL);
 
 	if(led1 == false)
 	{
