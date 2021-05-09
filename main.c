@@ -28,6 +28,9 @@ int main(void)
     chSysInit();
     mpu_init();
 
+    spi_comm_start();
+
+
 
     //starts the USB communication
     usb_start();

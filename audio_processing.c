@@ -151,7 +151,14 @@ void processAudio(int16_t *data, uint16_t num_samples){
 
 			if((highest_pic_R != WRONG_FREQ) && (highest_pic_L != WRONG_FREQ))
 			{
+				/*if((highest_pic_R == 24) && (highest_pic_L == 24)) {
+					sound_detected = true;
+				}
+				else {
+				    sound_detected = false;
+			}*/
 				sound_detected = true;
+
 				//chprintf((BaseSequentialStream *) &SDU1, " highest =    %d   ",highest_pic_L);
 				calcul_angle(micRight_cmplx_input[2*highest_pic_R+1], micRight_cmplx_input[2*highest_pic_R],
 						micLeft_cmplx_input[2*highest_pic_L+1], micLeft_cmplx_input[2*highest_pic_L]);

@@ -14,9 +14,9 @@
 #include <motors.h>
 #include <sensors/proximity.h>
 #include <leds.h>
-//#include <audio/play_melody.h>
-//#include <audio/play_melody.c>
+#include <audio/play_melody.h>
 #include <msgbus/messagebus.h>
+
 
 
 #define ANGLE_MIN           0.1 //radian
@@ -33,6 +33,12 @@
 #define MAX_SUM_ERROR 	   (MOTOR_SPEED_LIMIT/10*KI)
 #define ANGLE_MIN_PID       0.5
 #define INTENSITY_LIM		10000
+
+//#define PI                  3.1415926536f
+//TO ADJUST IF NECESSARY. NOT ALL THE E-PUCK2 HAVE EXACTLY THE SAME WHEEL DISTANCE
+//#define WHEEL_DISTANCE      5.35f    //cm
+//#define PERIMETER_EPUCK     (PI * WHEEL_DISTANCE)
+
 
 messagebus_t bus;
 MUTEX_DECL(bus_lock);
@@ -124,7 +130,7 @@ static THD_FUNCTION(Displacement, arg) {
 				//chprintf((BaseSequentialStream *) &SDU1, " no sound ");
 			}*/
 
-		}else{
+		} else {
 			intensity =  get_intensity();
 
 			if(intensity > INTENSITY_LIM)
@@ -145,6 +151,7 @@ static THD_FUNCTION(Displacement, arg) {
     	switch(mode)
     	{
     					case NORMAL_MODE:
+    						    clear_leds();
 							angle = get_angle();
 							//chprintf((BaseSequentialStream *) &SDU1, " normale mode ");
 							normal_displacement(angle);
@@ -165,6 +172,7 @@ static THD_FUNCTION(Displacement, arg) {
 
     					case SUCCESS_MODE:
     						//chprintf((BaseSequentialStream *) &SDU1, " SUCCES MODE ");
+    						set_body_led(ON);
     						normal_displacement(OFF);
     						break;
 
@@ -188,7 +196,7 @@ void displacement_start(void)
 	chThdCreateStatic(waDisplacement, sizeof(waDisplacement), NORMALPRIO, Displacement, NULL);
 	messagebus_init(&bus, &bus_lock, &bus_condvar);
 	proximity_start();
-	//playMelodyStart();
+	playMelodyStart();
 
 
 }
@@ -202,26 +210,23 @@ int idle_displacement(int led1)
 	displacement_rotation (IDLE_ANGLE, ROTATION_SPEED);
 
 
-	//playMelody(WE_ARE_THE_CHAMPIONS, ML_SIMPLE_PLAY, &melody[1]); don't understand error when I put this line
+	//playMelody(WE_ARE_THE_CHAMPIONS, ML_SIMPLE_PLAY, NULL);
 
 	if(led1 == false)
 	{
 		led1 = true;
 		set_led(LED1,ON);
-		set_led(LED3,OFF);
-		set_led(LED5,ON);
-		set_led(LED7,OFF);
-		//toggle_rgb_led(LED2, BLUE_LED, 200);
-		//toggle_rgb_led(LED4, BLUE_LED, 255);
+		set_rgb_led(LED2,0,0,200);
+		set_rgb_led(LED4,0,0,200);
+		set_rgb_led(LED6,0,0,200);
+		set_rgb_led(LED8,0,0,200);
 
 	}
 	else
 	{
 		led1 = false;
 		set_led(LED1,OFF);
-		set_led(LED3,ON);
-		set_led(LED5,OFF);
-		set_led(LED7,ON);
+
 	}
 
 	return led1;
@@ -442,4 +447,6 @@ int16_t pid_regulator(float error){
 	return speed;
 
 }
+
+
 
