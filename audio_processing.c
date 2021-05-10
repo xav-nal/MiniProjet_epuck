@@ -69,8 +69,10 @@ int16_t sound_remote(float* data){
 		if(data[i] > max_norm){
 			max_norm = data[i];
 			max_norm_index = i;
+			//return max_norm_index;
 		}
 	}
+	//return WRONG_FREQ;
 	//chprintf((BaseSequentialStream *) &SDU1, " maxnorme =    %d   ",max_norm_index);
 
 	if((max_norm_index >= FREQ_RESEARCH_L) && (max_norm_index <= FREQ_RESEARCH_G) )
