@@ -34,10 +34,21 @@
 #define ANGLE_MIN_PID       0.5
 #define INTENSITY_LIM		10000
 
-//#define PI                  3.1415926536f
-//TO ADJUST IF NECESSARY. NOT ALL THE E-PUCK2 HAVE EXACTLY THE SAME WHEEL DISTANCE
-//#define WHEEL_DISTANCE      5.35f    //cm
-//#define PERIMETER_EPUCK     (PI * WHEEL_DISTANCE)
+
+//TP2
+
+static int16_t counter_step_right = 0;          // in [step]
+static int16_t counter_step_left = 0; 		    // in [step]
+static int16_t position_to_reach_right = 0;	    // in [step]
+static int16_t position_to_reach_left = 0;	    // in [step]
+static uint8_t position_right_reached = 0;
+static uint8_t position_left_reached = 0;
+static uint8_t state_motor = 0;
+#define POSITION_CONTROL    1
+#define WHEEL_PERIMETER     13 // [cm]
+#define NSTEP_ONE_TURN      1000 // number of step for 1 turn of the motor
+#define POSITION_NOT_REACHED    0
+#define POSITION_REACHED        1
 
 
 messagebus_t bus;
@@ -79,6 +90,9 @@ void translation_movement(bool state);
 int16_t pid_regulator(float error);
 int idle_displacement(int led1);
 
+//TP2
+uint8_t motor_position_reached(void);
+void motor_set_position(float position_r, float position_l, float speed_r, float speed_l);
 
 
 
@@ -209,6 +223,8 @@ int idle_displacement(int led1)
 	//chprintf((BaseSequentialStream *) &SDU1, " idle displacement ");
 	displacement_rotation (IDLE_ANGLE, ROTATION_SPEED);
 
+	//motor_set_position(10,10,200,200);
+	//while(motor_position_reached() != POSITION_REACHED);
 
 	playMelody(WE_ARE_THE_CHAMPIONS, ML_SIMPLE_PLAY, NULL);
 
@@ -448,5 +464,34 @@ int16_t pid_regulator(float error){
 
 }
 
+//from TP2
 
+void motor_set_position(float position_r, float position_l, float speed_r, float speed_l)
+{
+	//reinit global variable
+	counter_step_left = 0;
+	counter_step_right = 0;
+
+    position_right_reached = 0;
+    position_left_reached = 0;
+
+	//Set global variable with position to reach in step
+	position_to_reach_left = position_l * NSTEP_ONE_TURN / WHEEL_PERIMETER;
+	position_to_reach_right = -position_r * NSTEP_ONE_TURN / WHEEL_PERIMETER;
+
+	left_motor_set_speed(speed_r);
+	right_motor_set_speed(speed_l);
+
+	//flag for position control, will erase flag for speed control only
+	state_motor = POSITION_CONTROL;
+}
+
+uint8_t motor_position_reached(void)
+{
+    if(state_motor == POSITION_CONTROL && position_right_reached && position_left_reached){
+        return POSITION_REACHED;
+    }else{
+        return POSITION_NOT_REACHED;
+}
+}
 
