@@ -32,7 +32,7 @@
 #define KI                  1.8f
 #define MAX_SUM_ERROR 	   (MOTOR_SPEED_LIMIT/10*KI)
 #define ANGLE_MIN_PID       0.5
-#define INTENSITY_LIM		100000
+#define INTENSITY_LIM		600000
 
 
 
@@ -57,6 +57,10 @@ static int obstacle_direction = 0;
 static uint32_t last_sound_detected = 0 ;
 
 
+systime_t time_8;
+static int idle_time = 0;
+
+
 
 
 unsigned int proximity_sensor[8];
@@ -68,7 +72,7 @@ int old_obstacle = false;
 
 int16_t obstacle_detection (void);
 void mode_management(bool sound_detected_value, int time_nosound_value, int intensity_value, systime_t time, uint16_t nearest_sensor);
-void obstacle_displacement(int16_t nearest_sensor);
+void obstacle_displacement(void);
 void normal_displacement(float angle);
 void displacement_rotation (float angle_value,int speed);
 void displacement_translation (int distance);
@@ -76,6 +80,8 @@ void rotation_movement(bool state,int direction,int speed);
 void translation_movement(bool state);
 int16_t pid_regulator(float error);
 int idle_displacement(int led1);
+void idle_8_mouvement(systime_t time);
+void idle_basic_mouvement(systime_t time);
 
 
 
@@ -126,7 +132,7 @@ static THD_FUNCTION(Displacement, arg) {
     					case OBSTACLE_MODE:
     						//chprintf((BaseSequentialStream *) &SDU1, " OBSTACLE MODE ");
     						clear_leds();
-    						obstacle_displacement(nearest_sensor);
+    						obstacle_displacement();
     						break;
 
     					case IDLE_MODE:
@@ -137,6 +143,7 @@ static THD_FUNCTION(Displacement, arg) {
     					case SUCCESS_MODE:
     						//chprintf((BaseSequentialStream *) &SDU1, " SUCCES MODE ");
     						set_body_led(ON);
+    						playMelody(WE_ARE_THE_CHAMPIONS, ML_SIMPLE_PLAY, NULL);
     						normal_displacement(OFF);
     						break;
 
@@ -170,6 +177,9 @@ void mode_management(bool sound_detected_value, int time_nosound_value, int inte
 
 	if(time_nosound_value >= 5000)
 	{
+		if(mode != IDLE_MODE){
+			idle_time = time;
+		}
 		mode = IDLE_MODE;
 		//chprintf((BaseSequentialStream *) &SDU1, " no sound ");
 	}
@@ -212,9 +222,13 @@ void mode_management(bool sound_detected_value, int time_nosound_value, int inte
 int idle_displacement(int led1)
 {
 	//chprintf((BaseSequentialStream *) &SDU1, " idle displacement ");
-	displacement_rotation (IDLE_ANGLE, ROTATION_SPEED);
 
-	//playMelody(WE_ARE_THE_CHAMPIONS, ML_SIMPLE_PLAY, NULL);
+	time_8 = chVTGetSystemTime();
+
+	idle_basic_mouvement(time_8);
+
+	//idle_8_mouvement(time_8);
+
 
 	if(led1 == false)
 	{
@@ -234,7 +248,8 @@ int idle_displacement(int led1)
 	return led1;
 }
 
-void obstacle_displacement(int16_t nearest_sensor)
+
+void obstacle_displacement(void)
 {
 	systime_t time;
 	time = chVTGetSystemTime();
@@ -461,5 +476,66 @@ int16_t pid_regulator(float error){
 
 }
 
+
+//trajet aller-retour du robot en continue avec demi_tour
+
+void idle_basic_mouvement(systime_t time){
+	if((time - idle_time) < 4000)
+	{
+		displacement_translation(OFF);
+	    left_motor_set_speed(624);
+	    right_motor_set_speed(300);
+	}
+	else if(((time - idle_time) < 5790) && ((time - idle_time) >= 4000))
+	{
+		displacement_translation(ON);
+	}
+	else if(((time - idle_time) < 9790) && ((time - idle_time) >= 5790))
+	{
+		displacement_translation(OFF);
+		left_motor_set_speed(624);
+		right_motor_set_speed(300);
+	}
+	else if(((time - idle_time) < 11580) && ((time - idle_time) >= 9790))
+	{
+		displacement_translation(ON);
+	}
+	else {
+		idle_time = time;
+	}
+
+}
+
+
+//trajet en forme de 8
+
+void idle_8_mouvement(systime_t time){
+
+	if((time - idle_time) < 5960)
+	{
+		displacement_translation(OFF);
+	    left_motor_set_speed(620);
+	    right_motor_set_speed(300);
+	}
+	else if(((time - idle_time) < 7750) && ((time - idle_time) >= 5960))
+	{
+		displacement_translation(ON);
+	}
+	else if(((time - idle_time) < 13710) && ((time - idle_time) >= 7750))
+	{
+		displacement_translation(OFF);
+		left_motor_set_speed(300);
+		right_motor_set_speed(620);
+	}
+	else if(((time - idle_time) < 15500) && ((time - idle_time) >= 13710))
+    {
+		displacement_translation(ON);
+	}
+	else
+	{
+		idle_time = time;
+	}
+
+}
 
 
