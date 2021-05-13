@@ -17,7 +17,6 @@
 #include <audio_processing.h>
 #include <obstacle.h>
 #include <fft.h>
-//#include <communications.h>
 #include <arm_math.h>
 
 

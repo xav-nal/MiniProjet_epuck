@@ -259,16 +259,8 @@ void obstacle_displacement(bool sound_detected)
 				displacement_rotation(OBSTACLE_ROT_LEFT);
 
 		}
-		else if(((time - obstacle_detected_time) < TIME_MODE_OBST) && ((time - obstacle_detected_time) >= OBST_ROT_LIM))
-		{
-			displacement_translation(100);
-		}
 		else
-		{
-			displacement_translation(OFF);
-			displacement_rotation(ROTATION_OFF);
-			mode = NORMAL_MODE;
-		}
+			displacement_translation(TRANSLATION_SPEED);
 	}
 	else
 		normal_displacement(OFF);

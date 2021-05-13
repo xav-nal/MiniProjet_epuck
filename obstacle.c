@@ -107,7 +107,7 @@ void obstacle_detection (void)
 
 	if(obst_det == false) {
 		obstacle_detected = false;
-		//set_front_led(OFF);
+		set_front_led(OFF);
 		nearest_sensor_index = -1;
 	}
 	else
