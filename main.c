@@ -15,11 +15,10 @@
 
 #include <displacement.h>
 #include <audio_processing.h>
+#include <obstacle.h>
 #include <fft.h>
-#include <communications.h>
+//#include <communications.h>
 #include <arm_math.h>
-
-
 
 
 
@@ -45,17 +44,11 @@ int main(void)
     //inits audio
     mic_start(&processAudio);
 
+    //inits obtacle detection
+    ObstacleDetection_start();
+
     //displacement init
     displacement_start();
-
-    /*
-    while(1)
-    {
-    	audio_test();
-    	displacement_test();
-    	displacement_start();
-    	chThdSleepMilliseconds(200);
-    }*/
 
 }
 
