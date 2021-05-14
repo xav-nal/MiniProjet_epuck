@@ -14,20 +14,24 @@
 #include <sensors/proximity.h>
 #include <msgbus/messagebus.h>
 
+#define SLEEP_TIME_THREAD	45//ms
 #define TRESHOLD_SENSOR     100 //defini experimentalement
 #define ON				    1
 #define OFF				    0
 
+#define IR_THREE			2
+#define IR_SEVEN			6
+#define TOTAL_IR			8
+
 void obstacle_detection (void);
-static bool obstacle_detected = false;
+
 
 messagebus_t bus;
 MUTEX_DECL(bus_lock);
 CONDVAR_DECL(bus_condvar);
 
-
+static bool obstacle_detected = false;
 static uint16_t nearest_sensor_index = 0;
-static unsigned int proximity_sensor[8];
 
 // ********** thread function *********
 static THD_WORKING_AREA(waObstacleDetection, 256);
@@ -37,11 +41,10 @@ static THD_FUNCTION(ObstacleDetection, arg) {
     (void)arg;
 
 
-
     while(1)
         {
     		obstacle_detection();
-    		 chThdSleepMilliseconds(45);
+    		 chThdSleepMilliseconds(SLEEP_TIME_THREAD);
         }
 
 }
@@ -51,7 +54,6 @@ void ObstacleDetection_start(void)
 	chThdCreateStatic(waObstacleDetection, sizeof(waObstacleDetection), NORMALPRIO, ObstacleDetection, NULL);
 	messagebus_init(&bus, &bus_lock, &bus_condvar);
 	proximity_start();
-
 }
 
 int16_t get_nearest_sensor(void)
@@ -64,14 +66,14 @@ bool get_obstacle_detected(void)
 	return obstacle_detected;
 }
 
-
 void obstacle_detection (void)
 {
 
 	int obst_det = 0;
 	int nearest_sensor = 0;
+	unsigned int proximity_sensor[8];
 
-	for(int i = 0; i < 2; i++)
+	for(int i = 0; i < IR_THREE; i++)
 	{
 		proximity_sensor[i] = get_prox(i);
 
@@ -88,7 +90,7 @@ void obstacle_detection (void)
 		}
 	}
 
-	for(int i = 6; i < 8; i++)
+	for(int i = IR_SEVEN; i < TOTAL_IR; i++)
 	{
 		proximity_sensor[i] = get_prox(i);
 
@@ -104,6 +106,7 @@ void obstacle_detection (void)
 			}
 		}
 	}
+	//chprintf((BaseSequentialStream *) &SDU1, " obtsacle detected %d ",obst_det);
 
 	if(obst_det == false) {
 		obstacle_detected = false;

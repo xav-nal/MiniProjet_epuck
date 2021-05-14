@@ -6,7 +6,6 @@
 #include <main.h>
 #include <audio/microphone.h>
 #include <audio_processing.h>
-//#include <communications.h>
 #include <fft.h>
 #include <arm_math.h>
 #include <math.h>
@@ -24,18 +23,21 @@ static float micLeft_output[FFT_SIZE];
 static float micRight_output[FFT_SIZE];
 
 
-#define MIN_VALUE_THRESHOLD	10000 
+#define MIN_VALUE_THRESHOLD		10000
 #define WRONG_FREQ             -1
 
-#define MIN_FREQ		10	//we don't analyze before this index to not use resources for nothing
-#define FREQ_RESEARCH 	24 //370HZ
-#define MAX_FREQ		30	//we don't analyze after this index to not use resources for nothing
+#define MIN_FREQ				10	//we don't analyze before this index to not use resources for nothing
+#define FREQ_RESEARCH 			24 //370HZ
+#define MAX_FREQ				30	//we don't analyze after this index to not use resources for nothing
 
-#define FREQ_RESEARCH_L  (FREQ_RESEARCH-1)
-#define FREQ_RESEARCH_G	 (FREQ_RESEARCH+1)
+#define FREQ_RESEARCH_L  		(FREQ_RESEARCH-1)
+#define FREQ_RESEARCH_G	 		(FREQ_RESEARCH+1)
 
-#define ANGLE_ADJUST  -3.98  // (pi/2)/(accumulate phase)
+#define ANGLE_ADJUST  			-3.98  // (pi/2)/(accumulate phase
+//#
 
+#define ALPHA					0.9
+#define BETA					0.1
 
 void calcul_angle(float im_r, float re_r, float im_l, float re_l);
 int16_t sound_remote(float* data);
@@ -62,7 +64,7 @@ float count_audio = 0;
 
 int16_t sound_remote(float* data){
 	float max_norm = MIN_VALUE_THRESHOLD;
-	int16_t max_norm_index = -1;
+	int16_t max_norm_index = WRONG_FREQ;
 
 	//search for the highest peak
 	for(uint16_t i = MIN_FREQ ; i <= MAX_FREQ ; i++){
@@ -73,7 +75,6 @@ int16_t sound_remote(float* data){
 		}
 	}
 	//return WRONG_FREQ;
-	//chprintf((BaseSequentialStream *) &SDU1, " maxnorme =    %d   ",max_norm_index);
 
 	if((max_norm_index >= FREQ_RESEARCH_L) && (max_norm_index <= FREQ_RESEARCH_G) )
 	{
@@ -103,7 +104,6 @@ void processAudio(int16_t *data, uint16_t num_samples){
 			//construct an array of complex numbers. Put 0 to the imaginary part
 			micRight_cmplx_input[nb_samples] = (float)data[i + MIC_RIGHT];
 			micLeft_cmplx_input[nb_samples] = (float)data[i + MIC_LEFT];
-
 
 			nb_samples++;
 
@@ -149,8 +149,6 @@ void processAudio(int16_t *data, uint16_t num_samples){
 			int16_t highest_pic_L = sound_remote(micLeft_output);
 
 
-
-
 			if((highest_pic_R != WRONG_FREQ) && (highest_pic_L != WRONG_FREQ))
 			{
 				/*if((highest_pic_R == 24) && (highest_pic_L == 24)) {
@@ -161,7 +159,7 @@ void processAudio(int16_t *data, uint16_t num_samples){
 			}*/
 				sound_detected = true;
 
-				//chprintf((BaseSequentialStream *) &SDU1, " highest =    %d   ",highest_pic_L);
+
 				calcul_angle(micRight_cmplx_input[2*highest_pic_R+1], micRight_cmplx_input[2*highest_pic_R],
 						micLeft_cmplx_input[2*highest_pic_L+1], micLeft_cmplx_input[2*highest_pic_L]);
 
@@ -170,7 +168,6 @@ void processAudio(int16_t *data, uint16_t num_samples){
 				intensity = sqrt((micRight_cmplx_input[2*highest_pic_R+1])*(micRight_cmplx_input[2*highest_pic_R+1]) +
 						micRight_cmplx_input[2*highest_pic_R]*micRight_cmplx_input[2*highest_pic_R] );
 
-				//chprintf((BaseSequentialStream *) &SDU1, " intensity =    %d   ",intensity);
 
 			}
 			else
@@ -193,21 +190,17 @@ void calcul_angle(float im_r, float re_r, float im_l, float re_l)
 	float angle_L = 0;
 
 	angle_R = atan2f(im_r, re_r);
-	//chprintf((BaseSequentialStream *) &SDU1, " angle r =    %f rad  ",angle_R);
 
 	angle_L = atan2f(im_l, re_l);
 
-	angle_diff= angle_R - angle_L;
-	//chprintf((BaseSequentialStream *) &SDU1, " angle =    %f rad  ",angle_diff);
+	angle_diff = angle_R - angle_L;
 }
 
 
-void regulateur(void) {
-
+void regulateur(void)
+{
 	angle_diff = 0.9*angle_diff + 0.1*angle_diff_old;
-
 	angle_diff_old = angle_diff;
-
 }
 
 float get_angle(void)

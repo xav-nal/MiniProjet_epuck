@@ -7,21 +7,19 @@
 #include "hal.h"
 #include <usbcfg.h>
 #include <chprintf.h>
-#include <audio_processing.h>
 
 #include <main.h>
+#include <audio_processing.h>
 #include <displacement.h>
 #include <motors.h>
 #include <leds.h>
 #include <audio/play_melody.h>
 #include <obstacle.h>
-/*
-#include <sensors/proximity.h>
-#include <msgbus/messagebus.h>
-*/
 
+#define SLEEP_TIME_THREAD	50//ms
 
 #define ANGLE_MIN           0.1 //radian
+#define ANGLE_START_TRANS	0.5 //radian
 #define DISTANCE_LIM        3   //cm
 #define ROTATION_SPEED      600 // speed robot in rotation [step/s]
 #define TRANSLATION_SPEED   700 // speed robot in translation  [step/s]
@@ -50,7 +48,6 @@
 #define TIME_MODE_OBST			1500
 #define OBST_ROT_LIM			250
 
-
 #define IDLE_FIRST_MVT_LIM		4000 //time ms
 #define IDLE_SND_MVT_LIM		5790
 #define IDLE_THD_MVT_LIM		9790
@@ -64,34 +61,19 @@
 #define IR_ONE					0
 #define IR_TWO					1
 
-
-
-
-/*messagebus_t bus;
-MUTEX_DECL(bus_lock);
-CONDVAR_DECL(bus_condvar);*/
-
-
 enum { 	NORMAL_MODE, OBSTACLE_MODE, IDLE_MODE, SUCCESS_MODE};
-static  int mode = NORMAL_MODE;
 
-//static int rotation_state = OFF;
-static float angle = 0;
-
+static int obstacle_direction = 0;
 static bool obstacle_detected = false;
 
-static int obstacle_detected_time = 0;
-static int obstacle_direction = 0;
 
-
+static systime_t obstacle_detected_time = 0;
 static systime_t last_sound_detected = 0 ;
-
-static systime_t time_idle;
 static systime_t idle_time_loop = 0;
 
 //intern function
-int16_t obstacle_detection (void);
-void mode_management(bool sound_detected_value, int time_nosound_value, int intensity_value, systime_t time, uint16_t nearest_sensor);
+
+int mode_management(int mode, bool sound_detected_value, int time_nosound_value, int intensity_value, systime_t time, bool obstacle_detected, uint16_t nearest_sensor);
 void obstacle_displacement(bool sound_detected);
 void normal_displacement(float angle);
 void displacement_rotation (float angle_value,int speed);
@@ -99,7 +81,7 @@ void displacement_translation (int distance);
 void rotation_movement(bool state,int direction,int speed);
 void translation_movement(bool state);
 int16_t pid_regulator(float error);
-int idle_displacement(int led1);
+void idle_displacement(int led1);
 void idle_8_mouvement(systime_t time);
 void idle_basic_mouvement(systime_t time);
 
@@ -115,14 +97,14 @@ static THD_FUNCTION(Displacement, arg) {
 
     systime_t time;
 
+    int mode = NORMAL_MODE;
+    float angle = 0;
     int led1 = false;
     int intensity = 0;
     int time_nosound = 0;
     bool sound_detected = false;
     uint16_t nearest_sensor = 0;
-
-
-    //time = chVTGetSystemTime();
+    //bool obstacle_detected = false;
 
 
     while(1)
@@ -133,39 +115,38 @@ static THD_FUNCTION(Displacement, arg) {
 
     	sound_detected = get_sound();
 
-    	//nearest_sensor = obstacle_detection();
-
     	obstacle_detected = get_obstacle_detected();
-    	nearest_sensor = get_nearest_sensor();
+    	//chprintf((BaseSequentialStream *) &SDU1, " OBSRACLE %d  ",obstacle_detected);
 
-
-    	mode_management(sound_detected, time_nosound, intensity, time, nearest_sensor);
-
+    	mode = mode_management(mode, sound_detected, time_nosound, intensity, time, obstacle_detected, nearest_sensor);
+    	//chprintf((BaseSequentialStream *) &SDU1, " MODE %d  ",mode);
 
     	switch(mode)
     	{
     					case NORMAL_MODE:
     						//chprintf((BaseSequentialStream *) &SDU1, " NORMAL MODE ");
-    						clear_leds();
+    						initialisation_leds();
 							angle = get_angle();
 							normal_displacement(angle);
     						break;
 
     					case OBSTACLE_MODE:
     						//chprintf((BaseSequentialStream *) &SDU1, " OBSTACLE MODE ");
-    						clear_leds();
+    						initialisation_leds();
+    						nearest_sensor = get_nearest_sensor();
     						obstacle_displacement(sound_detected);
     						break;
 
     					case IDLE_MODE:
+    						initialisation_leds();
     						//chprintf((BaseSequentialStream *) &SDU1, " IDLE MODE ");
-    						led1 = idle_displacement(led1);
+    						idle_displacement(led1);
 							break;
 
     					case SUCCESS_MODE:
     						//chprintf((BaseSequentialStream *) &SDU1, " SUCCES MODE ");
     						set_body_led(ON);
-    						playMelody(WE_ARE_THE_CHAMPIONS, ML_SIMPLE_PLAY, NULL);
+    						//playMelody(WE_ARE_THE_CHAMPIONS, ML_SIMPLE_PLAY, NULL);
     						normal_displacement(OFF);
     						break;
 
@@ -176,8 +157,7 @@ static THD_FUNCTION(Displacement, arg) {
     	}
 
 		//wake up in 50ms
-		//chThdSleepUntilWindowed(time, time + MS2ST(200));
-	    chThdSleepMilliseconds(50);
+	    chThdSleepMilliseconds(SLEEP_TIME_THREAD);
 
    }
 }
@@ -186,22 +166,20 @@ static THD_FUNCTION(Displacement, arg) {
 void displacement_start(void)
 {
 	chThdCreateStatic(waDisplacement, sizeof(waDisplacement), NORMALPRIO, Displacement, NULL);
-	//messagebus_init(&bus, &bus_lock, &bus_condvar);
-	//proximity_start();
 	playMelodyStart();
 }
 
 
 // ********** intern function **********
-void mode_management(bool sound_detected_value, int time_nosound_value, int intensity_value, systime_t time, uint16_t nearest_sensor)
+int mode_management(int mode, bool sound_detected_value, int time_nosound_value, int intensity_value, systime_t time, bool obstacle_detected, uint16_t nearest_sensor)
 {
 	time = chVTGetSystemTime();
 
 	if(time_nosound_value >= TIME_NOSOUND_LIM)
 	{
-		if(mode != IDLE_MODE){
+		if(mode != IDLE_MODE)
 			idle_time_loop = time;
-		}
+
 		mode = IDLE_MODE;
 	}
 
@@ -211,14 +189,16 @@ void mode_management(bool sound_detected_value, int time_nosound_value, int inte
 		mode = NORMAL_MODE;
 	}
 
-	if(obstacle_detected == false){
+	if(obstacle_detected == false)
+	{
 
 		if((time - obstacle_detected_time) < TIME_MODE_OBST	)
-		{
 			mode = OBSTACLE_MODE;
-		}
 
-	} else {
+	}
+	else
+	{
+		//chprintf((BaseSequentialStream *) &SDU1, " ELSE  ");
 		intensity_value =  get_intensity();
 
 		if(intensity_value > INTENSITY_LIM)
@@ -230,15 +210,13 @@ void mode_management(bool sound_detected_value, int time_nosound_value, int inte
 			mode = OBSTACLE_MODE;
 			obstacle_detected_time = time;
 			normal_displacement(OFF);
-
-			//set_front_led(ON);
-
 			if((nearest_sensor == IR_ONE) || (nearest_sensor == IR_TWO))
 				obstacle_direction = RIGHT;
 			else
 				obstacle_direction = LEFT;
 		}
 	}
+	return mode;
 }
 
 
@@ -275,15 +253,17 @@ void normal_displacement(float angle_value)
 		if(abs(angle_value) < ANGLE_MIN)
 		{
 			displacement_translation(ON);
+
 		}
 		else
 		{
 			displacement_translation(OFF);
-			displacement_rotation (angle_value,pid_regulator(angle));
+			displacement_rotation (angle_value,pid_regulator(angle_value));
 		}
 
 	}
-	else {
+	else
+	{
 		displacement_rotation(ROTATION_OFF);
 		displacement_translation(OFF);
 	}
@@ -332,7 +312,8 @@ void rotation_movement(bool state, int direction,int speed)
 			right_motor_set_speed(-speed);
 		}
 
-	}else
+	}
+	else
 	{
 		left_motor_set_speed(OFF);
 		right_motor_set_speed(OFF);
@@ -353,7 +334,8 @@ void translation_movement(bool state)
 	}
 }
 
-int16_t pid_regulator(float error){
+int16_t pid_regulator(float error)
+{
 
 	error = fabs(error);
 
@@ -376,8 +358,10 @@ int16_t pid_regulator(float error){
 	return speed;
 
 }
-int idle_displacement(int led1)
+
+void idle_displacement(int led1)
 {
+	systime_t time_idle;
 
 	time_idle = chVTGetSystemTime();
 
@@ -397,12 +381,11 @@ int idle_displacement(int led1)
 		led1 = false;
 		set_led(LED1,OFF);
 	}
-
-	return led1;
 }
 
 //trajet aller-retour du robot en continue avec demi_tour
-void idle_basic_mouvement(systime_t time){
+void idle_basic_mouvement(systime_t time)
+{
 	if((time - idle_time_loop) < IDLE_FIRST_MVT_LIM)
 	{
 		displacement_translation(OFF);
@@ -431,6 +414,7 @@ void idle_basic_mouvement(systime_t time){
 void initialisation_leds(void)
 {
 	clear_leds();
+	set_body_led(OFF);
 }
 //trajet en forme de 8
 /*
