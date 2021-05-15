@@ -23,6 +23,8 @@
 #define IR_SEVEN			6
 #define TOTAL_IR			8
 
+#define NO_OBSTACLE			-1
+
 void obstacle_detection (void);
 
 
@@ -106,17 +108,15 @@ void obstacle_detection (void)
 			}
 		}
 	}
-	//chprintf((BaseSequentialStream *) &SDU1, " obtsacle detected %d ",obst_det);
 
 	if(obst_det == false) {
 		obstacle_detected = false;
 		set_front_led(OFF);
-		nearest_sensor_index = -1;
+		nearest_sensor_index = NO_OBSTACLE;
 	}
 	else
 	{
 		obstacle_detected = true;
-		//return nearest_sensor_index;
 	}
 }
 
