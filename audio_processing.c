@@ -124,6 +124,8 @@ void processAudio(int16_t *data, uint16_t num_samples)
 
 				angle_diff = angle_diff*ANGLE_ADJUST;
 
+				regulateur();
+
 				intensity = sqrt((micRight_cmplx_input[2*highest_pic_R+1])*(micRight_cmplx_input[2*highest_pic_R+1]) +
 						micRight_cmplx_input[2*highest_pic_R]*micRight_cmplx_input[2*highest_pic_R] );
 
@@ -194,8 +196,6 @@ void calcul_angle(float im_r, float re_r, float im_l, float re_l)
 	angle_L = atan2f(im_l, re_l);
 
 	angle_diff = angle_R - angle_L;
-
-	regulateur();
 
 }
 
