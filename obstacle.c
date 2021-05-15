@@ -14,8 +14,8 @@
 #include <sensors/proximity.h>
 #include <msgbus/messagebus.h>
 
-#define SLEEP_TIME_THREAD	45//ms
-#define TRESHOLD_SENSOR     100 //defini experimentalement
+#define SLEEP_TIME_THREAD	45 	// [ms]
+#define TRESHOLD_SENSOR		100 // Experimentally defined
 #define ON				    1
 #define OFF				    0
 
@@ -23,19 +23,28 @@
 #define IR_SEVEN			6
 #define TOTAL_IR			8
 
-#define NO_OBSTACLE			-1
+#define NO_OBSTACLE		-1
 
+
+// ********** Prototype of internal function *********
 void obstacle_detection (void);
+
+//****************************************************
 
 
 messagebus_t bus;
 MUTEX_DECL(bus_lock);
 CONDVAR_DECL(bus_condvar);
 
+
+
+// ********** Static variables *********
 static bool obstacle_detected = false;
 static uint16_t nearest_sensor_index = 0;
 
-// ********** thread function *********
+
+
+// ********** Thread function *********
 static THD_WORKING_AREA(waObstacleDetection, 256);
 static THD_FUNCTION(ObstacleDetection, arg) {
 
@@ -51,6 +60,9 @@ static THD_FUNCTION(ObstacleDetection, arg) {
 
 }
 
+
+
+// ********** Public functions *********
 void ObstacleDetection_start(void)
 {
 	chThdCreateStatic(waObstacleDetection, sizeof(waObstacleDetection), NORMALPRIO, ObstacleDetection, NULL);
@@ -58,16 +70,22 @@ void ObstacleDetection_start(void)
 	proximity_start();
 }
 
+
+
 int16_t get_nearest_sensor(void)
 {
 	return nearest_sensor_index;
 }
+
+
 
 bool get_obstacle_detected(void)
 {
 	return obstacle_detected;
 }
 
+
+// ********** Internal function *********
 void obstacle_detection (void)
 {
 

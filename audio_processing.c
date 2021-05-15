@@ -12,27 +12,29 @@
 #include<displacement.h>
 
 #define MIN_VALUE_THRESHOLD		10000
-#define WRONG_FREQ             -1
+#define WRONG_FREQ				-1
 
-#define MIN_FREQ				10 //we don't analyze before this index to not use resources for nothing
-#define FREQ_RESEARCH 			24 //370HZ
-#define MAX_FREQ				30 //we don't analyze after this index to not use resources for nothing
+#define MIN_FREQ				10 // We don't analyze before this index to not use resources for nothing
+#define FREQ_RESEARCH 		24 // 370 Hz
+#define MAX_FREQ				30 // We don't analyze after this index to not use resources for nothing
 
-#define FREQ_RESEARCH_L  		(FREQ_RESEARCH-1)
-#define FREQ_RESEARCH_G	 		(FREQ_RESEARCH+1)
+#define FREQ_RESEARCH_L  	(FREQ_RESEARCH-1)
+#define FREQ_RESEARCH_G	 	(FREQ_RESEARCH+1)
 
-#define ANGLE_ADJUST  			-3.98  // (pi/2)/(accumulate phase)
-//#
+#define ANGLE_ADJUST  		-4.04 // Proportionality factor between the angle of rotation and the phase difference
 
-#define ALPHA					0.9
+#define ALPHA				0.9
 #define BETA					0.1
 
-//intern function
+
+// ********** Prototype of internal function *********
 void calcul_angle(float im_r, float re_r, float im_l, float re_l);//, float im_f, float re_f, float im_b, float re_b);
 int16_t sound_remote(float* data);
 void regulateur(void);
 
 
+
+// ********** Static variables *********
 //2 times FFT_SIZE because these arrays contain complex numbers (real + imaginary)
 static float micLeft_cmplx_input[2 * FFT_SIZE];
 static float micRight_cmplx_input[2 * FFT_SIZE];
@@ -49,35 +51,7 @@ static bool sound_detected = 0;
 
 
 
-/*
- * Fonction qui permet de calculer le pic le plus haut de la fréquence ;
- * elle retourne l'index correspondant à la position de cette fréquence
- * dans le buffer
- *
- */
-
-int16_t sound_remote(float* data)
-{
-	float max_norm = MIN_VALUE_THRESHOLD;
-	int16_t max_norm_index = WRONG_FREQ;
-
-	//search for the highest peak
-	for(uint16_t i = MIN_FREQ ; i <= MAX_FREQ ; i++){
-		if(data[i] > max_norm)
-		{
-			max_norm = data[i];
-			max_norm_index = i;
-		}
-	}
-
-	if((max_norm_index >= FREQ_RESEARCH_L) && (max_norm_index <= FREQ_RESEARCH_G) )
-	{
-		return max_norm_index;
-	}else
-		return WRONG_FREQ;
-}
-
-
+// ********** Public functions *********
 void processAudio(int16_t *data, uint16_t num_samples)
 {
 
@@ -160,10 +134,58 @@ void processAudio(int16_t *data, uint16_t num_samples)
 				angle_diff = false;
 			}
 		}
+	}
+
+
+float get_angle(void)
+{
+	return angle_diff;
+}
+
+bool get_sound(void)
+{
+	return sound_detected;
+}
+
+int get_intensity(void)
+{
+	return intensity;
 }
 
 
-void calcul_angle(float im_r, float re_r, float im_l, float re_l)//, float im_f, float re_f, float im_b, float re_b)
+
+// ********** Internal functions *********
+
+/*
+ * Function which allows to calculate the highest peak of the frequency ;
+ * it returns the index corresponding to the position of this frequency
+ * in the buffer
+ */
+
+int16_t sound_remote(float* data)
+{
+	float max_norm = MIN_VALUE_THRESHOLD;
+	int16_t max_norm_index = WRONG_FREQ;
+
+	//search for the highest peak
+	for(uint16_t i = MIN_FREQ ; i <= MAX_FREQ ; i++){
+		if(data[i] > max_norm)
+		{
+			max_norm = data[i];
+			max_norm_index = i;
+		}
+	}
+
+	if((max_norm_index >= FREQ_RESEARCH_L) && (max_norm_index <= FREQ_RESEARCH_G) )
+	{
+		return max_norm_index;
+	}else
+		return WRONG_FREQ;
+}
+
+
+
+void calcul_angle(float im_r, float re_r, float im_l, float re_l)
 {
 	float angle_R = 0;
 	float angle_L = 0;
@@ -184,18 +206,5 @@ void regulateur(void)
 	angle_diff_old = angle_diff;
 }
 
-float get_angle(void)
-{
-	return angle_diff;
-}
 
-bool get_sound(void)
-{
-	return sound_detected;
-}
-
-int get_intensity(void)
-{
-	return intensity;
-}
 

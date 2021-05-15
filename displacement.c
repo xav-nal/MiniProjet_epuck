@@ -16,56 +16,51 @@
 #include <audio/play_melody.h>
 #include <obstacle.h>
 
-#define SLEEP_TIME_THREAD	50//ms
+#define SLEEP_TIME_THREAD	50	// [ms]
 
-#define ANGLE_MIN           0.1 //radian
-#define ANGLE_START_TRANS	0.5 //radian
-#define DISTANCE_LIM        3   //cm
-#define ROTATION_SPEED      600 // speed robot in rotation [step/s]
-#define TRANSLATION_SPEED   700 // speed robot in translation  [step/s]
+#define ANGLE_MIN          	0.1 	// [radian]
+#define ROTATION_SPEED      	600 // speed robot in rotation [step/s]
+#define TRANSLATION_SPEED   	700 // speed robot in translation  [step/s]
 
-#define TIME_LIM			5   //seconde
-#define IDLE_ANGLE          2
-#define ON				    1
-#define OFF				    0
+#define ON				   	1
+#define OFF				    	0
 #define RIGHT				2
-#define LEFT			    3
-#define KP                  180.0f
-#define KI                  1.8f
-#define MAX_SUM_ERROR 	   (MOTOR_SPEED_LIMIT/10*KI)
-#define ANGLE_MIN_PI        0.5
+#define LEFT			    		3
+#define KP                  	180.0f
+#define KI                  	1.8f
+#define MAX_SUM_ERROR 	   	(MOTOR_SPEED_LIMIT/10*KI)
+#define ANGLE_MIN_PI       	0.5	// [rad]
 #define INTENSITY_LIM		250000
 
-#define OBSTACLE_ANGLE		100
-#define OBSTACLE_ROT_RIGHT  100,ROTATION_SPEED
-#define OBSTACLE_ROT_LEFT  -100,ROTATION_SPEED
-#define TIME_MODE_OBST			900
+#define OBSTACLE_ROT_RIGHT  	100,ROTATION_SPEED
+#define OBSTACLE_ROT_LEFT  	-100,ROTATION_SPEED
+#define TIME_MODE_OBST		900
 #define OBST_ROT_LIM			500
 
-#define DARK_BLUE          0,0,200
-#define DARK_GREEN         0,200,0
-#define DARK_YELLOW		  255,255,0
+#define DARK_BLUE          	0,0,200
+#define DARK_GREEN         	0,200,0
+#define DARK_YELLOW		 	255,255,0
 
-#define ROTATION_OFF		OFF,OFF
-#define ROT_MVT_OFF 		OFF,OFF,OFF
+#define ROTATION_OFF			OFF,OFF
+#define ROT_MVT_OFF 			OFF,OFF,OFF
 
-#define IDLE_FIRST_MVT_LIM		4000 //time ms
-#define IDLE_SND_MVT_LIM		5790
-#define IDLE_THD_MVT_LIM		9790
-#define IDLE_FRTH_MVT_LIM		11580
+#define IDLE_FIRST_MVT_LIM	4000	  //time [ms]
+#define IDLE_SND_MVT_LIM		5540  // [ms]
+#define IDLE_THD_MVT_LIM		9540  // [ms]
+#define IDLE_FRTH_MVT_LIM	11080 // [ms]
 
-#define IDLE_SPEED_ROT_LEFT 	624
-#define IDLE_SPEED_ROT_RIGHT	300
+#define IDLE_SPEED_ROT_LEFT 	624   // [step/s]
+#define IDLE_SPEED_ROT_RIGHT	300	  // [step/s]
 
-#define TIME_NOSOUND_LIM		5000
+#define TIME_NOSOUND_LIM		5000	  // [ms]
 
-#define IR_ONE					0
-#define IR_TWO					1
+#define IR_ONE				0
+#define IR_TWO				1
 
-enum { 	NORMAL_MODE, OBSTACLE_MODE, IDLE_MODE, SUCCESS_MODE};
+enum {NORMAL_MODE, OBSTACLE_MODE, IDLE_MODE, SUCCESS_MODE};
 
 
-//intern function
+// ********** Prototypes of internal functions *********
 int  mode_management(int mode, bool sound_detected_value );
 void obstacle_displacement(bool sound_detected);
 void normal_displacement(float angle);
@@ -80,6 +75,8 @@ void initialisation_leds(void);
 void success_animation(void);
 void normale_animation(void);
 
+
+// ********** Static variables *********
 static int obstacle_direction = 0;
 static bool obstacle_detected = false;
 
@@ -87,7 +84,8 @@ static systime_t obstacle_detected_time = 0;
 static systime_t last_sound_detected = 0 ;
 static systime_t idle_time_loop = 0;
 
-// ********** thread function *********
+
+// ********** Thread function *********
 static THD_WORKING_AREA(waDisplacement, 256);
 static THD_FUNCTION(Displacement, arg) {
 
@@ -146,7 +144,7 @@ static THD_FUNCTION(Displacement, arg) {
    }
 }
 
-// ********** public function *********
+// ********** Public function *********
 void displacement_start(void)
 {
 	chThdCreateStatic(waDisplacement, sizeof(waDisplacement), NORMALPRIO, Displacement, NULL);
@@ -154,7 +152,7 @@ void displacement_start(void)
 }
 
 
-// ********** intern function **********
+// ********** Internal functions **********
 int mode_management(int mode, bool sound_detected_value )
 {
 	int intensity_value = 0;
@@ -185,7 +183,8 @@ int mode_management(int mode, bool sound_detected_value )
 			mode = NORMAL_MODE;
 		}
 
-		if((time - obstacle_detected_time) < TIME_MODE_OBST	)//finish mvt in obst mode
+		//We have to finish rotation and translation in obstacle mode, so we have to stay in this mode
+		if((time - obstacle_detected_time) < TIME_MODE_OBST)
 		{
 			mode = OBSTACLE_MODE;
 		}
@@ -201,8 +200,8 @@ int mode_management(int mode, bool sound_detected_value )
 			mode = SUCCESS_MODE;
 		}
 		else
-		{
-			if(mode != OBSTACLE_MODE )// first time obst det
+		{	// First time obstacle detected
+			if(mode != OBSTACLE_MODE )
 			{
 				mode = OBSTACLE_MODE;
 				obstacle_detected_time = time;
@@ -213,7 +212,9 @@ int mode_management(int mode, bool sound_detected_value )
 				else
 					obstacle_direction = LEFT;
 			}
-			else if(((time - obstacle_detected_time) > TIME_MODE_OBST	) && (mode == OBSTACLE_MODE))// finish obs mode but obs forever
+
+			// If you detect an obstacle but you are already in obstacle mode :
+			else if(((time - obstacle_detected_time) > TIME_MODE_OBST	) && (mode == OBSTACLE_MODE))
 			{
 				obstacle_detected_time = time;
 				normal_displacement(OFF);
@@ -232,6 +233,7 @@ int mode_management(int mode, bool sound_detected_value )
 	}
 	return mode;
 }
+
 
 
 void obstacle_displacement(bool sound_detected)
@@ -258,6 +260,7 @@ void obstacle_displacement(bool sound_detected)
 }
 
 
+
 void normal_displacement(float angle_value)
 {
 
@@ -282,6 +285,8 @@ void normal_displacement(float angle_value)
 	}
 }
 
+
+
 void displacement_rotation (float angle_value,int speed)
 {
 
@@ -303,6 +308,8 @@ void displacement_rotation (float angle_value,int speed)
 		return;
 }
 
+
+
 void displacement_translation (int distance_value)
 {
 	if(distance_value != OFF)
@@ -310,6 +317,8 @@ void displacement_translation (int distance_value)
 	else
 		translation_movement(OFF);
 }
+
+
 
 void rotation_movement(bool state, int direction,int speed)
 {
@@ -334,6 +343,8 @@ void rotation_movement(bool state, int direction,int speed)
 	}
 }
 
+
+
 void translation_movement(bool state)
 {
 	if(state == ON)
@@ -348,6 +359,9 @@ void translation_movement(bool state)
 	}
 }
 
+
+
+// The PI regulator is based and inspired by the one found in TP4
 int16_t pi_regulator(float error)
 {
 
@@ -389,7 +403,8 @@ void idle_displacement(void)
 
 }
 
-//trajet aller-retour du robot en continue avec demi_tour
+
+//Loop-shaped movement of the robot
 void idle_basic_mouvement(systime_t time)
 {
 	if((time - idle_time_loop) < IDLE_FIRST_MVT_LIM)

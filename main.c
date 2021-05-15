@@ -28,25 +28,25 @@ int main(void)
     chSysInit();
     mpu_init();
 
-    //to use the music/sound from the robot
+    //Initializes the DAC to use the music/sound from the robot
     dac_start();
 
-    //start the spi communication to use RGB led
+    //Initializes and starts the spi communication to use RGB led
     spi_comm_start();
 
-    //starts the USB communication
+    //Starts the USB communication
     usb_start();
 
-    //inits the motors
+    //Initializes the motors
     motors_init();
 
-    //inits audio
+    //Initializes audio
     mic_start(&processAudio);
 
-    //inits obtacle detection
+    //Initialize ObstacleDetection thread
     ObstacleDetection_start();
 
-    //displacement init
+    //Initialize Displacement thread
     displacement_start();
 
 }
