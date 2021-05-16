@@ -1,3 +1,12 @@
+/**
+ * \file		audio_processing.c
+ * \version		Final
+ * \date		2021-05-16
+ * \author		Xavier Nal et Estelle Richard
+ * \brief		Implementation of audio analysis module
+ *
+ */
+
 #include "ch.h"
 #include "hal.h"
 #include <usbcfg.h>
@@ -15,7 +24,7 @@
 #define WRONG_FREQ				-1
 
 #define MIN_FREQ				10 // We don't analyze before this index to not use resources for nothing
-#define FREQ_RESEARCH 		24 // 370 Hz
+#define FREQ_RESEARCH 			24 // 370 Hz
 #define MAX_FREQ				30 // We don't analyze after this index to not use resources for nothing
 
 #define FREQ_RESEARCH_L  	(FREQ_RESEARCH-1)
@@ -24,7 +33,8 @@
 #define ANGLE_ADJUST  		-4.04 // Proportionality factor between the angle of rotation and the phase difference
 
 #define ALPHA				0.9
-#define BETA					0.1
+#define BETA				0.1
+
 
 
 // ********** Prototype of internal function *********
@@ -54,6 +64,7 @@ static bool sound_detected = 0;
 // ********** Public functions *********
 void processAudio(int16_t *data, uint16_t num_samples)
 {
+
 	/*
 		*
 		*	We get 160 samples per mic every 10ms
@@ -201,6 +212,9 @@ void calcul_angle(float im_r, float re_r, float im_l, float re_l)
 
 void regulateur(void)
 {
+	if(abs(angle_diff) > PI)
+		angle_diff = angle_diff_old;
+
 	angle_diff = ALPHA*angle_diff + BETA*angle_diff_old;
 	angle_diff_old = angle_diff;
 }

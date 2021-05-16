@@ -1,3 +1,14 @@
+/**
+ * \file		main.c
+ * \version		Final
+ * \date		2021-05-16
+ * \author		Xavier Nal et Estelle Richard
+ * \brief		Implementation of main module
+ *
+ *This module initializes the peripherals and the threads
+ *
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

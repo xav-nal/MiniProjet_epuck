@@ -1,8 +1,10 @@
-/*
- * obstacle.h
+/**
+ * \file		obstacle.h
+ * \version		Final
+ * \date		2021-05-16
+ * \author		Xavier Nal et Estelle Richard
+ * \brief		Header module in charge of obstacle detection
  *
- *  Created on: 13 mai 2021
- *      Author: Xavier NAL
  */
 
 #ifndef OBSTACLE_H_

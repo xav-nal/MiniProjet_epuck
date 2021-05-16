@@ -1,3 +1,14 @@
+/**
+ * \file		main.c
+ * \version		Final
+ * \date		2021-05-16
+ * \author		Xavier Nal et Estelle Richard
+ * \brief		Header module of the main
+ *
+ *This module initializes the peripherals and the threads
+ *
+ */
+
 #ifndef MAIN_H
 #define MAIN_H
 

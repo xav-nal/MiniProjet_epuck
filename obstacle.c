@@ -1,3 +1,12 @@
+/**
+ * \file		obstacle.c
+ * \version		Final
+ * \date		2021-05-16
+ * \author		Xavier Nal et Estelle Richard
+ * \brief		Implementation of module obstacle detection
+ *
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

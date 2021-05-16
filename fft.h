@@ -1,8 +1,8 @@
 /*
  * From TP5
+ * We use the original file
  *
  */
-
 #ifndef FFT_H
 #define FFT_H
 

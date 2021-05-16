@@ -1,10 +1,16 @@
-/*
- * From TP5
+/**
+ * \file		displacement.h
+ * \version		Final
+ * \date		2021-05-16
+ * \author		Xavier Nal et Estelle Richard
+ * \brief		Header module of robot displacement
+ *
  * We have kept and modified the processAudio
  * and sound_remote functions of the TP5.
  * Other functions have been added
  *
  */
+
 
 #ifndef AUDIO_PROCESSING_H
 #define AUDIO_PROCESSING_H

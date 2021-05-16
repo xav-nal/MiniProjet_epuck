@@ -1,3 +1,8 @@
+/*
+ * From TP5
+ * We use the original file
+ *
+ */
 #include "ch.h"
 #include "hal.h"
 #include <main.h>

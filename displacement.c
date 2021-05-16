@@ -1,3 +1,12 @@
+/**
+ * \file		displacement.c
+ * \version		Final
+ * \date		2021-05-16
+ * \author		Xavier Nal et Estelle Richard
+ * \brief		Implementation of robot displacement module
+ *
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -16,46 +25,46 @@
 #include <audio/play_melody.h>
 #include <obstacle.h>
 
-#define SLEEP_TIME_THREAD	50	// [ms]
+#define SLEEP_TIME_THREAD		50	// [ms]
 
-#define ANGLE_MIN          	0.1 	// [radian]
+#define ANGLE_MIN          		0.1 // [radian]
 #define ROTATION_SPEED      	600 // speed robot in rotation [step/s]
 #define TRANSLATION_SPEED   	700 // speed robot in translation  [step/s]
 
-#define ON				   	1
+#define ON				   		1
 #define OFF				    	0
-#define RIGHT				2
-#define LEFT			    		3
+#define RIGHT					2
+#define LEFT			    	3
 #define KP                  	180.0f
 #define KI                  	1.8f
-#define MAX_SUM_ERROR 	   	(MOTOR_SPEED_LIMIT/10*KI)
-#define ANGLE_MIN_PI       	0.5	// [rad]
-#define INTENSITY_LIM		250000
+#define MAX_SUM_ERROR 	   	 (MOTOR_SPEED_LIMIT/10*KI)
+#define ANGLE_MIN_PI         	0.5	// [rad]
+#define INTENSITY_LIM		   250000
 
 #define OBSTACLE_ROT_RIGHT  	100,ROTATION_SPEED
-#define OBSTACLE_ROT_LEFT  	-100,ROTATION_SPEED
-#define TIME_MODE_OBST		900
+#define OBSTACLE_ROT_LEFT  	   -100,ROTATION_SPEED
+#define TIME_MODE_OBST			900
 #define OBST_ROT_LIM			500
 
-#define DARK_BLUE          	0,0,200
-#define DARK_GREEN         	0,200,0
-#define DARK_YELLOW		 	255,255,0
+#define DARK_BLUE          	    0,0,200
+#define DARK_GREEN           	0,200,0
+#define DARK_YELLOW		 	    255,255,0
 
 #define ROTATION_OFF			OFF,OFF
 #define ROT_MVT_OFF 			OFF,OFF,OFF
 
-#define IDLE_FIRST_MVT_LIM	4000	  //time [ms]
+#define IDLE_FIRST_MVT_LIM	    4000  //time [ms]
 #define IDLE_SND_MVT_LIM		5540  // [ms]
 #define IDLE_THD_MVT_LIM		9540  // [ms]
-#define IDLE_FRTH_MVT_LIM	11080 // [ms]
+#define IDLE_FRTH_MVT_LIM	    11080 // [ms]
 
 #define IDLE_SPEED_ROT_LEFT 	624   // [step/s]
 #define IDLE_SPEED_ROT_RIGHT	300	  // [step/s]
 
 #define TIME_NOSOUND_LIM		5000	  // [ms]
 
-#define IR_ONE				0
-#define IR_TWO				1
+#define IR_ONE					 0
+#define IR_TWO				     1
 
 enum {NORMAL_MODE, OBSTACLE_MODE, IDLE_MODE, SUCCESS_MODE};
 
@@ -183,7 +192,7 @@ int mode_management(int mode, bool sound_detected_value )
 			mode = NORMAL_MODE;
 		}
 
-		//We have to finish rotation and translation in obstacle mode, so we have to stay in this mode
+		//To finish rotation and translation in obstacle mode, (to stay in this mode)
 		if((time - obstacle_detected_time) < TIME_MODE_OBST)
 		{
 			mode = OBSTACLE_MODE;
@@ -244,7 +253,7 @@ int mode_management(int mode, bool sound_detected_value )
 }
 
 
-
+//make a rotation and a translation
 void obstacle_displacement(bool sound_detected)
 {
 	if(sound_detected)
@@ -413,7 +422,7 @@ void idle_displacement(void)
 }
 
 
-//Loop-shaped movement of the robot
+//Loop-shaped idle movement of the robot
 void idle_basic_mouvement(systime_t time)
 {
 	if((time - idle_time_loop) < IDLE_FIRST_MVT_LIM)
