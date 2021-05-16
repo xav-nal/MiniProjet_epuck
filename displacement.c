@@ -212,9 +212,7 @@ int mode_management(int mode, bool sound_detected_value )
 				else
 					obstacle_direction = LEFT;
 			}
-
-			// If you detect an obstacle but you are already in obstacle mode :
-			else if(((time - obstacle_detected_time) > TIME_MODE_OBST	) && (mode == OBSTACLE_MODE))
+			else if(((time - obstacle_detected_time) > TIME_MODE_OBST	) && (mode == OBSTACLE_MODE))// If you detect an obstacle but you are already in obstacle mode
 			{
 				obstacle_detected_time = time;
 				normal_displacement(OFF);
@@ -223,6 +221,17 @@ int mode_management(int mode, bool sound_detected_value )
 					obstacle_direction = RIGHT;
 				else
 					obstacle_direction = LEFT;
+			}
+			else if((mode == OBSTACLE_MODE) && (sound_detected_value == false))
+			{
+
+				obstacle_detected_time = time;
+
+				if((nearest_sensor == IR_ONE) || (nearest_sensor == IR_TWO))
+					obstacle_direction = RIGHT;
+				else
+					obstacle_direction = LEFT;
+
 			}
 		}
 	}

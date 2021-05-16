@@ -23,7 +23,7 @@
 #define IR_SEVEN			6
 #define TOTAL_IR			8
 
-#define NO_OBSTACLE		-1
+#define NO_OBSTACLE			-1
 
 
 // ********** Prototype of internal function *********

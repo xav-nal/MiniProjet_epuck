@@ -54,7 +54,6 @@ static bool sound_detected = 0;
 // ********** Public functions *********
 void processAudio(int16_t *data, uint16_t num_samples)
 {
-
 	/*
 		*
 		*	We get 160 samples per mic every 10ms
@@ -136,7 +135,7 @@ void processAudio(int16_t *data, uint16_t num_samples)
 				angle_diff = false;
 			}
 		}
-	}
+}
 
 
 float get_angle(void)
