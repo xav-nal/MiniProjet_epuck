@@ -31,6 +31,7 @@
 #define ROTATION_SPEED      	600 // speed robot in rotation [step/s]
 #define TRANSLATION_SPEED   	700 // speed robot in translation  [step/s]
 
+#define ZERO  0
 #define ON				   		1
 #define OFF				    	0
 #define RIGHT					2

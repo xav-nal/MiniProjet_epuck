@@ -20,7 +20,6 @@ extern "C" {
 #include "msgbus/messagebus.h"
 #include "parameter/parameter.h"
 
-#define ZERO  0
 
 
 
